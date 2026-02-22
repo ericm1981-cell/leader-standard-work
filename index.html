@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#060b12" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Leader Standard Work</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { background: #060b12; height: 100%; }
+      #root { min-height: 100vh; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script>
+  // Simple on-screen error box (helps when you're on a phone and can't open DevTools)
+  (function () {
+    function show(msg) {
+      try {
+        var box = document.getElementById('errbox');
+        if (!box) {
+          box = document.createElement('pre');
+          box.id = 'errbox';
+          box.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;max-height:45vh;overflow:auto;z-index:99999;background:#1b0b0b;color:#ffd1d1;border:1px solid #ff6b6b;padding:12px;border-radius:10px;white-space:pre-wrap;font:12px/1.35 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;';
+          document.body.appendChild(box);
+        }
+        box.textContent = msg;
+      } catch (e) {}
+    }
+    window.addEventListener('error', function (e) {
+      show('APP ERROR
+' + (e && e.message ? e.message : String(e)) + (e && e.filename ? ('
+' + e.filename + ':' + e.lineno + ':' + e.colno) : ''));
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+      var r = e && e.reason ? e.reason : e;
+      show('APP ERROR (Promise)
+' + (r && r.stack ? r.stack : String(r)));
+    });
+    window.__LSW_SHOW_ERROR__ = show;
+  })();
+</script>
+<script type="module">
+  import('./index-Cqp3tFjh.js').catch((e) => {
+    const msg = (e && e.stack) ? e.stack : String(e);
+    (window.__LSW_SHOW_ERROR__ || console.error).call(null, 'FAILED TO START APP
+' + msg + '
+
+Common causes:
+- The JS file did not upload (wrong name)
+- GitHub cached an older file (hard refresh)
+- A script blocked on your device/network');
+  });
+</script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
