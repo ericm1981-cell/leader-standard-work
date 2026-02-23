@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#060b12"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>Leader Standard Work</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#060b12;color:#e2e8f0;font-family:'DM Mono','Courier New',monospace;min-height:100vh}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#1f2937}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.fade{animation:fadeUp .25s ease}
+@keyframes sIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+.notif-anim{animation:sIn .3s ease}
+input,select,textarea{background:#111827;border:1px solid #374151;color:#f9fafb;border-radius:6px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:#3b82f6}
+textarea{resize:vertical}
+button{cursor:pointer;font-family:inherit}
+.pill{background:transparent;border:1px solid #374151;color:#94a3b8;border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700}
+.card{background:#0f172a;border:1px solid #1f2937;border-radius:10px;margin-bottom:10px}
+.section-lbl{display:block;font-size:10px;letter-spacing:1.5px;color:#94a3b8;margin-bottom:5px;font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.add-btn{background:transparent;border:1px dashed #374151;color:#6b7280;border-radius:8px;padding:10px;font-size:11px;width:100%;margin-top:6px;letter-spacing:1px;transition:all .2s}
+.add-btn:hover{border-color:#3b82f6;color:#3b82f6}
+.remove-btn{background:transparent;border:none;color:#374151;font-size:14px;padding:2px 6px;transition:color .2s}
+.remove-btn:hover{color:#dc2626}
+.tab-bar{display:flex;gap:2px;overflow-x:auto;padding:0 16px;background:#060b12;border-bottom:1px solid #0f1925;white-space:nowrap}
+.tab-bar::-webkit-scrollbar{height:0}
+.tab-btn{padding:10px 12px;border:none;background:transparent;font-family:inherit;font-size:10px;font-weight:700;letter-spacing:1px;color:#4b5563;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:#0f172a}
+.modal-overlay{position:fixed;inset:0;background:#000a;z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-box{background:#0f172a;border-radius:14px;width:100%;max-width:360px;padding:24px}
+.disp-pill{border-radius:4px;padding:3px 9px;font-size:11px;font-weight:700;white-space:nowrap;border:1px solid}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ─── DATA & CONSTANTS ─────────────────────────────────────────
+const LEVELS = ["Team Member","Team Leader","Supervisor","Manager"];
+const LL = { "Team Member":{en:"Team Member",es:"Miembro"}, "Team Leader":{en:"Team Leader",es:"Líder Equipo"}, "Supervisor":{en:"Supervisor",es:"Supervisor"}, "Manager":{en:"Manager",es:"Gerente"} };
+const LC = { "Team Member":"#22c55e", "Team Leader":"#3b82f6", "Supervisor":"#a855f7", "Manager":"#f97316" };
+
+const DISPOSITIONS = {
+  MAINTAIN:     {en:"Maintain",    es:"Mantener",      color:"#16a34a",bg:"#052e16",icon:"✓"},
+  PUSH_DOWN:    {en:"Push Down",   es:"Delegar Abajo", color:"#d97706",bg:"#1c1003",icon:"↓"},
+  ELIMINATE:    {en:"Eliminate",   es:"Eliminar",      color:"#dc2626",bg:"#1c0202",icon:"✕"},
+  FIREFIGHTING: {en:"Firefighting",es:"Apagar Fuegos", color:"#ea580c",bg:"#1c0a02",icon:"🔥"},
+  ESCALATE:     {en:"Escalate",    es:"Escalar",       color:"#7c3aed",bg:"#120a1c",icon:"↑"},
+};
+
+const CATS = {
+  en:["Quality Response","Production / Output","People / Coaching","Meetings","Data / Reporting","Equipment / Maintenance","Scheduling","Communication","Safety","Continuous Improvement","Administrative","Other"],
+  es:["Respuesta Calidad","Producción","Personas / Coaching","Reuniones","Datos / Reportes","Equipo / Mantenimiento","Programación","Comunicación","Seguridad","Mejora Continua","Administrativo","Otro"]
+};
+const FF_CAUSES = {
+  en:["No standard exists","Standard not followed","Training gap","Equipment failure","Material shortage","Planning/scheduling failure","Communication breakdown","Recurring — systemic","One-time anomaly"],
+  es:["No existe estándar","Estándar no seguido","Brecha de entrenamiento","Falla de equipo","Escasez de material","Falla de planificación","Falla de comunicación","Recurrente — sistémico","Anomalía única"]
+};
+const GUIDE_QS = {
+  "Team Leader":{en:["When a problem hits your line, do you fix it yourself or coach your team member to fix it?","Are there tasks you do today that a trained team member could own?","When you're in a meeting, who is watching your process?","How much of your shift is planned vs. reactive?","When did you last give structured feedback against a standard?"],es:["Cuando hay un problema, ¿lo resuelves tú o entrenas al miembro del equipo?","¿Hay tareas que un miembro entrenado podría hacer?","Cuando estás en reunión, ¿quién observa el proceso?","¿Cuánto de tu turno está planificado vs. reactivo?","¿Cuándo diste retroalimentación estructurada contra un estándar?"]},
+  "Supervisor":{en:["In your last gemba walk, were you observing/coaching TLs — or fixing problems yourself?","Who owns your visual board data? If it's you, why?","Can you tell if your area is on-standard without walking the floor?","What % of your day is your standard work vs. firefighting?","When a TL brings a problem, do you solve it or coach them?","When did you last audit a TL's behavior — not their results?"],es:["En tu último gemba walk, ¿observabas/entrenabas TLs o resolvías problemas?","¿Quién es dueño de los datos del tablero?","¿Puedes saber si tu área está al estándar sin caminar el piso?","¿Qué % de tu día es trabajo estándar vs. apagando fuegos?","Cuando un TL trae un problema, ¿lo resuelves o lo entrenas?","¿Cuándo auditaste el comportamiento de un TL — no sus resultados?"]},
+  "Manager":{en:["How do you verify supervisors execute standard work — not just hit numbers?","Are you in meetings your supervisors should own?","When did you last develop a supervisor's capability vs. solve their problem?","What's your process to identify a supervisor working below level?","Do you have a layered audit — and are you the one closing it?"],es:["¿Cómo verificas que supervisores ejecutan trabajo estándar?","¿Estás en reuniones que tus supervisores deberían dirigir?","¿Cuándo desarrollaste la capacidad de un supervisor vs. resolviste su problema?","¿Cuál es tu proceso para detectar un supervisor trabajando por debajo de su nivel?","¿Tienes auditoría por capas — y eres tú quien la cierra?"]},
+  "Team Member":{en:["Do you know the standard for your job — and does it match what you actually do?","When something goes wrong, do you have a clear way to signal your team leader?","What slows you down most each shift?","Do you understand how your work connects to quality and delivery?"],es:["¿Conoces el estándar para tu trabajo — y coincide con lo que haces?","Cuando algo sale mal, ¿tienes forma clara de señalizar al líder?","¿Qué te frena más en cada turno?","¿Entiendes cómo tu trabajo conecta con calidad y entrega?"]}
+};
+const WRONG_LEVEL = {
+  "Team Leader":{en:["Running product to catch up","Pulling production reports","Handling HR directly","Making scheduling decisions","Attending management meetings"],es:["Correr producto para alcanzar ritmo","Extraer reportes de producción","Manejar RRHH directamente","Decisiones de programación","Asistir a reuniones gerenciales"]},
+  "Supervisor":{en:["Updating visual boards themselves","Fixing equipment hands-on","Doing TL coaching with team members","Building their own reports","Covering open headcount on line"],es:["Actualizar tableros ellos mismos","Reparar equipos manualmente","Hacer coaching de TL con miembros","Construir sus propios reportes","Cubrir plazas en la línea"]},
+  "Manager":{en:["Attending Tier 1 floor meetings","Solving supervisor-level problems","Daily scheduling decisions","Building metrics reports","Handling individual team member issues"],es:["Asistir a reuniones Tier 1","Resolver problemas de supervisor","Decisiones diarias de programación","Construir reportes de métricas","Manejar problemas individuales de miembros"]},
+  "Team Member":{
+    en:["Being asked to make scheduling or quality disposition decisions","Covering another person's role without proper training","Solving equipment problems that require maintenance","Working without a clear standard to follow","Attending meetings that aren't relevant to your work"],
+    es:["Tomar decisiones de programación o disposición de calidad","Cubrir el rol de otra persona sin entrenamiento","Resolver problemas de equipo que requieren mantenimiento","Trabajar sin un estándar claro a seguir","Asistir a reuniones que no son relevantes para tu trabajo"]
+  }
+};
+
+const WATCH_COLORS = {Safety:"#ef4444",Seguridad:"#ef4444",Quality:"#f59e0b",Calidad:"#f59e0b",Delivery:"#3b82f6",Entrega:"#3b82f6",Cost:"#22c55e",Costo:"#22c55e"};
+
+// ─── PRE-CANNED SUPERVISOR TEMPLATE (from uploaded form) ───────
+const SUPERVISOR_TEMPLATE_EN = [
+  // Morning
+  {id:"t1",text:"Lead morning meeting — review KPIs",freq:"Each Shift",timeOfDay:"Shift Start",duration:"15",owner:"Supervisor",standard:"Back-orders and truck returns are identified and team is aware of goals",auditTier:["Manager"],timeBin:"Start of Shift"},
+  {id:"t2",text:"Startup Readiness communicated to teams — People, Equipment, Parts",freq:"Each Shift",timeOfDay:"Shift Start",duration:"10",owner:"Supervisor",standard:"All 3 elements (People / Equipment / Parts) confirmed before production starts",auditTier:["Manager"],timeBin:"Start of Shift"},
+  {id:"t3",text:"Spin Report reviewed and communicated",freq:"Each Shift",timeOfDay:"Shift Start",duration:"10",owner:"Supervisor",standard:"Spin report reviewed, action owners identified, team notified",auditTier:["Manager"],timeBin:"Start of Shift"},
+  // During Day
+  {id:"t4",text:"Critical to Quality Checks completed — Pre-Break, Pre/Post Lunch",freq:"3x Daily",timeOfDay:"",duration:"10",owner:"Supervisor",standard:"CTQ checks completed at each interval per standard. Findings documented.",auditTier:["Manager"],timeBin:"Morning"},
+  {id:"t5",text:"Standard Work Audit completed and actions documented",freq:"Daily",timeOfDay:"",duration:"20",owner:"Supervisor",standard:"At least 1 TL audited per shift. Non-conformances documented with owner and due date.",auditTier:["Manager"],timeBin:"Morning"},
+  {id:"t6",text:"Problem Solving time slot used for daily problem solving",freq:"Daily",timeOfDay:"",duration:"30",owner:"Supervisor",standard:"Structured problem solving session held — not firefighting. A3 or 5-why in use.",auditTier:["Manager"],timeBin:"Mid-Shift"},
+  {id:"t7",text:"Time Cards updated",freq:"Daily",timeOfDay:"",duration:"10",owner:"Supervisor",standard:"All time cards current and accurate",auditTier:[],timeBin:"Mid-Shift"},
+  {id:"t8",text:"Attendance Actions conducted as needed",freq:"As Needed",timeOfDay:"",duration:"",owner:"Supervisor",standard:"Policy followed, documented, HR notified if required",auditTier:["Manager"],timeBin:"Mid-Shift"},
+  {id:"t9",text:"Back Orders and Truck Returns reviewed and progressing",freq:"Daily",timeOfDay:"",duration:"10",owner:"Supervisor",standard:"All back orders have action owner and target date. No aging > standard.",auditTier:["Manager"],timeBin:"Mid-Shift"},
+  {id:"t10",text:"KPI Board Actions up to date — action owner, due date, no late items",freq:"Daily",timeOfDay:"",duration:"10",owner:"Supervisor",standard:"All actions have owner and due date. Nothing past due without escalation.",auditTier:["Manager"],timeBin:"Mid-Shift"},
+  {id:"t11",text:"Safety Audit completed and follow-up done with Committee Person",freq:"Daily",timeOfDay:"",duration:"15",owner:"Supervisor",standard:"Safety audit checklist completed. All findings have corrective action assigned.",auditTier:["Manager"],timeBin:"Mid-Shift"},
+  {id:"t12",text:"Jeff Circle (Ohno Circle) — structured observation completed for each TL",freq:"Weekly",dayOfWeek:"Friday",timeOfDay:"",duration:"60",owner:"Supervisor",standard:"Supervisor stands in circle and observes TL executing standard work. Observations documented — what was followed, what wasn't, what coaching is needed. No intervention during observation.",auditTier:["Manager"],timeBin:"Weekly"},
+  // End of Shift
+  {id:"t13",text:"Red Tag Racks — everything labeled and marked",freq:"Each Shift",timeOfDay:"End of Shift",duration:"10",owner:"Supervisor",standard:"All red tag items identified, labeled, segregated. Nothing unlabeled.",auditTier:["Manager"],timeBin:"End of Shift"},
+  {id:"t14",text:"Frame/Sash Remakes entered in remake tracker (QR Code)",freq:"Each Shift",timeOfDay:"End of Shift",duration:"10",owner:"Supervisor",standard:"All remakes logged before shift end. No untracked remakes.",auditTier:["Manager"],timeBin:"End of Shift"},
+  {id:"t15",text:"KPI Board updated with daily info",freq:"Each Shift",timeOfDay:"End of Shift",duration:"10",owner:"Supervisor",standard:"All KPIs updated with actuals. Trends visible.",auditTier:["Manager"],timeBin:"End of Shift"},
+  {id:"t16",text:"Back Orders reviewed — all actioned",freq:"Each Shift",timeOfDay:"End of Shift",duration:"10",owner:"Supervisor",standard:"All back orders reviewed. Action owners confirmed. Nothing un-actioned.",auditTier:["Manager"],timeBin:"End of Shift"},
+  {id:"t17",text:"Hourly HPR Miss updates completed in Dashboard — 'Red Hours'",freq:"Each Shift",timeOfDay:"End of Shift",duration:"10",owner:"Supervisor",standard:"All red hours documented with reason code and corrective note in dashboard.",auditTier:["Manager"],timeBin:"End of Shift"},
+];
+
+const ES_TEXTS = {
+  "t1":"Dirigir reunión matutina — revisar KPIs",
+  "t2":"Comunicar Preparación de Arranque — Personas, Equipo, Partes",
+  "t3":"Reporte Spin revisado y comunicado",
+  "t4":"Verificaciones Críticas de Calidad — Pre-Descanso, Pre/Post Almuerzo",
+  "t5":"Auditoría de Trabajo Estándar completada y acciones documentadas",
+  "t6":"Espacio de Resolución de Problemas utilizado para resolución diaria",
+  "t7":"Tarjetas de Tiempo actualizadas",
+  "t8":"Acciones de Asistencia realizadas según necesidad",
+  "t9":"Órdenes Pendientes y Devoluciones de Camión revisadas y progresando",
+  "t10":"Acciones del Tablero KPI al día — dueño, fecha límite, sin atrasados",
+  "t11":"Auditoría de Seguridad completada y seguimiento con Persona del Comité",
+  "t12":"Jeff Circle (Círculo Ohno) — observación estructurada completada para cada TL",
+  "t13":"Racks de Etiqueta Roja — todo etiquetado y marcado",
+  "t14":"Retrabajos de Marco/Sash ingresados en rastreador (Código QR)",
+  "t15":"Tablero KPI actualizado con información diaria",
+  "t16":"Órdenes Pendientes revisadas — todas accionadas",
+  "t17":"Actualizaciones horarias HPR Miss completadas en Dashboard — 'Horas Rojas'"
+};
+const SUPERVISOR_TEMPLATE_ES = SUPERVISOR_TEMPLATE_EN.map(t=>({...t, text: ES_TEXTS[t.id]||t.text}));
+
+
+// ─── MANAGER TEMPLATE ─────────────────────────────────────────
+const MANAGER_TEMPLATE = [
+  {id:"m1",text:"Tier 2 / Tier 3 meeting — review department KPIs and escalations",freq:"Daily",timeOfDay:"Shift Start",duration:"20",owner:"Manager",standard:"Supervisors present data. Manager asks why, not what. Escalations have owners and dates.",auditTier:[],timeBin:"Start of Shift"},
+  {id:"m2",text:"Gemba walk — observe supervisors executing standard work (not results)",freq:"Daily",timeOfDay:"",duration:"30",owner:"Manager",standard:"At least 1 supervisor observed per day. Coaching notes documented. Not a firefighting walk.",auditTier:[],timeBin:"Morning"},
+  {id:"m3",text:"Layered audit — verify supervisor LSW completion",freq:"Daily",timeOfDay:"",duration:"20",owner:"Manager",standard:"Supervisor LSW signed off. Non-conformances logged with coaching follow-up within 24hrs.",auditTier:[],timeBin:"Morning"},
+  {id:"m4",text:"Problem solving review — verify A3s / 5-whys are progressing, not stalled",freq:"Daily",timeOfDay:"",duration:"20",owner:"Manager",standard:"Every open A3 has an owner, a next action, and a due date. Nothing stalled >3 days without escalation.",auditTier:[],timeBin:"Mid-Shift"},
+  {id:"m5",text:"Supervisor 1:1 coaching — development conversation (not firefighting debrief)",freq:"Weekly",dayOfWeek:"Wednesday",timeOfDay:"",duration:"45",owner:"Manager",standard:"Coaching against development plan, not daily issues. Supervisor owns the agenda. Manager asks questions.",auditTier:[],timeBin:"Weekly"},
+  {id:"m6",text:"KPI trend review — week over week, identify patterns not just daily misses",freq:"Weekly",dayOfWeek:"Monday",timeOfDay:"",duration:"30",owner:"Manager",standard:"Trend analysis, not point-in-time. Identify systemic issues. Action items have owners.",auditTier:[],timeBin:"Weekly"},
+  {id:"m7",text:"Safety audit — verify corrective actions closed from prior week",freq:"Weekly",dayOfWeek:"Friday",timeOfDay:"",duration:"20",owner:"Manager",standard:"All prior week safety actions verified closed or escalated. No aging open items.",auditTier:[],timeBin:"Weekly"},
+  {id:"m8",text:"Capacity / staffing review — next week readiness",freq:"Weekly",dayOfWeek:"Thursday",timeOfDay:"",duration:"20",owner:"Manager",standard:"People, equipment, materials confirmed for next week. Gaps identified and actioned before Friday.",auditTier:[],timeBin:"Weekly"},
+];
+
+// ─── TEAM LEADER TEMPLATE ──────────────────────────────────────
+const TL_TEMPLATE = [
+  {id:"tl1",text:"Pre-shift check — People, Parts, Equipment confirmed before production starts",freq:"Each Shift",timeOfDay:"Shift Start",duration:"10",owner:"Team Leader",standard:"All 3 elements confirmed. Any gap escalated to Supervisor before line starts. No surprises.",auditTier:["Supervisor"],timeBin:"Start of Shift"},
+  {id:"tl2",text:"Team member assignment — roles communicated to each person",freq:"Each Shift",timeOfDay:"Shift Start",duration:"5",owner:"Team Leader",standard:"Every team member knows their station and daily target before production starts.",auditTier:["Supervisor"],timeBin:"Start of Shift"},
+  {id:"tl3",text:"Hourly production check — actual vs. target, log misses immediately",freq:"Each Shift",timeOfDay:"",duration:"5",owner:"Team Leader",standard:"HPR board updated every hour. Misses logged with reason code in real time — not end of shift.",auditTier:["Supervisor"],timeBin:"Morning"},
+  {id:"tl4",text:"Quality check — verify team members following standard work at workstation",freq:"Each Shift",timeOfDay:"",duration:"15",owner:"Team Leader",standard:"At least 1 structured observation per shift per zone. Deviations documented and coached — not just fixed.",auditTier:["Supervisor"],timeBin:"Morning"},
+  {id:"tl5",text:"5S audit — walk zone and document condition",freq:"Daily",timeOfDay:"",duration:"10",owner:"Team Leader",standard:"Zone meets 5S standard. Items out of place returned or tagged. Score logged on visual board.",auditTier:["Supervisor"],timeBin:"Mid-Shift"},
+  {id:"tl6",text:"Problem escalation — issues beyond TL authority raised to Supervisor with data",freq:"As Needed",timeOfDay:"",duration:"",owner:"Team Leader",standard:"Problem described with: what happened, when, how many affected, what TL already tried. Not just 'we have a problem'.",auditTier:[],timeBin:"Mid-Shift"},
+  {id:"tl7",text:"Team member feedback — structured coaching against standard (not just correction)",freq:"Daily",timeOfDay:"",duration:"10",owner:"Team Leader",standard:"At least 1 team member receives specific, standard-referenced feedback per shift. Positive and developmental.",auditTier:["Supervisor"],timeBin:"Mid-Shift"},
+  {id:"tl8",text:"End of shift handoff — communicate open issues, production status, next shift priorities",freq:"Each Shift",timeOfDay:"End of Shift",duration:"10",owner:"Team Leader",standard:"Incoming TL knows: production status, open issues, any equipment concerns, staffing gaps.",auditTier:["Supervisor"],timeBin:"End of Shift"},
+  {id:"tl9",text:"Visual board update — actuals, misses, and actions documented",freq:"Each Shift",timeOfDay:"End of Shift",duration:"10",owner:"Team Leader",standard:"All metrics updated with actuals. Trend visible. Actions have owner and due date.",auditTier:["Supervisor"],timeBin:"End of Shift"},
+];
+
+const uid = () => Math.random().toString(36).slice(2,9);
+
+
+// ─── TRANSLATIONS ─────────────────────────────────────────────
+const T = {
+  en: {
+    appTitle:"LEADER STANDARD WORK", appSub:"TIME DIAGNOSTIC · WORK LEVEL ANALYSIS",
+    loggingFor:"LOGGING FOR:",
+    tabs:["LOG TASKS","MY LSW","REQUIRED","CRITICAL WATCH","GUIDE","ANALYZE","ACTION PLAN"],
+    tabKeys:["log","lsw","required","watch","guide","analyze","action"],
+    addTask:"Log a task — tap ✓ or Enter",
+    logInstructions:"WHAT TO LOG",
+    logHints:{
+      "Team Member":["Tasks your TL asked outside your normal job","Times you waited — parts, equipment, instructions","Quality issues you found or fixed","Anything that slowed your work down"],
+      "Team Leader":["Every time you fixed instead of coached","Meetings, reports, data you pulled yourself","Any time you covered a team member role","Firefighting — what broke, what you did, how long","Coaching interactions — structured or reactive"],
+      "Supervisor":["Every gemba walk — duration and observations","Meetings attended — were you the right person?","Problems TLs brought — did you solve or coach?","Reports or data you built yourself","Firefighting you got pulled into","Time: admin vs. floor vs. developing people"],
+      "Manager":["Meetings your supervisors should own","Problems you solved that supervisors should own","Verifying results vs. verifying standard work execution","Coaching supervisors vs. doing their work","Strategic work vs. operational firefighting"]
+    },
+    noTasks:"START LOGGING YOUR DAY", noTasksSub:"Every task — planned or reactive. Be honest.",
+    category:"Category", timeSpent:"Time (min)", timeBin:"When in shift?",
+    isFF:"Firefighting?", ffCause:"Root Cause", ffNote:"What happened + countermeasure idea...",
+    disposition:"Disposition", pushTo:"Push to which level?",
+    pushNote:"What must happen for them to own it?", eliminateNote:"Why does it exist? Who stops it?",
+    notes:"Notes", remove:"Remove", yes:"Yes", no:"No",
+    wrongWork:"DOESN'T BELONG AT THIS LEVEL",
+    reflectionPH:"Honest answer — not the job description, but how you actually spent your last 5 days...",
+    actionPlan:"ACTION PLAN", pushDown:"PUSH DOWN", eliminate:"ELIMINATE",
+    ffAnalysis:"FIREFIGHTING ANALYSIS", maintain:"MAINTAIN — YOUR REAL JOB",
+    maintainSub:"Right-level work. Build these into your standard work.",
+    keyQuestion:"KEY QUESTION:", keyQuestionText:"Same fires keep happening? The system is broken — not the people. What standard must change?",
+    exportLSW:"Export LSW", noActionYet:"Log tasks and assign dispositions to see your action plan.",
+    delegateTo:"→ Delegate to:",
+    requiredTitle:"REQUIRED ACTIVITIES", requiredSub:"Non-negotiables. These build your LSW schedule and layered audit.",
+    addRequired:"Add required activity...",
+    freqOpts:["Each Shift","Daily","2x Daily","3x Daily","Weekly","Monthly","As Needed"],
+    weekdays:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+    timeOfDay:"Time of Day", duration:"Duration (min)", standard:"Standard / What good looks like",
+    dayOfWeek:"Day of Week", dayOfMonth:"Day of Month",
+    auditTier:"Verified by (layered audit)", owner:"Owner", save:"Save", edit:"Edit", cancel:"Cancel",
+    watchTitle:"CRITICAL WATCH", watchSub:"SQDC monitoring. Builds your layered audit.",
+    addWatch:"Add watch item...", watchCat:"Category",
+    watchCats:["Safety","Quality","Delivery","Cost"],
+    timesPerDay:"Times per day", checkBy:"Checked by",
+    threshold:"Alert threshold", thresholdPH:"e.g. Scrap > 2%, OTD < 95%",
+    auditNote:"Action if breached", auditNotePH:"e.g. Stop line, call quality...",
+    layeredAuditTitle:"LAYERED AUDIT STRUCTURE",
+    lswTitle:"MY LEADER STANDARD WORK", lswSub:"Required activities + Maintain tasks by time block. Layered audit shown.",
+    noLSW:"Add Required Activities and classify tasks as Maintain to build your LSW.",
+    lswLayeredAudit:"LAYERED AUDIT VERIFICATION",
+    saved:"Saved ✓", timeBins:["Start of Shift","Morning","Mid-Shift","End of Shift","Weekly","Monthly"],
+    freq:"Frequency", noWatch:"No watch items yet.",
+    exportPickTitle:"EXPORT FORMAT", exportPickSub:"Choose format for",
+    exportPDF:"↓ PDF TRIFOLD", exportPDFsub:"Print-ready · Landscape · Fold in thirds",
+    exportXL:"↓ EXCEL TRIFOLD", exportXLsub:"3-column panel layout · Opens in Excel",
+    cancelBtn:"Cancel", aiCoach:"✦ AI COACH", aiBtn:"Analyze with Lean Coach", aiThinking:"Analyzing...",
+    aiOffline:"AI Coach available inside Claude.ai only — use the Guide tab for coaching prompts.",
+    loggedBadge:"LOGGED", ffBadge:"FIREFIGHTING", wlBadge:"WRONG LEVEL",
+    taskCount:"TASKS LOGGED",
+  },
+  es: {
+    appTitle:"TRABAJO ESTÁNDAR DEL LÍDER", appSub:"DIAGNÓSTICO DE TIEMPO · ANÁLISIS DE NIVEL",
+    loggingFor:"REGISTRANDO PARA:",
+    tabs:["TAREAS","MI TSL","REQUERIDAS","VIGILANCIA","GUÍA","ANALIZAR","PLAN ACCIÓN"],
+    tabKeys:["log","lsw","required","watch","guide","analyze","action"],
+    addTask:"Registra una tarea — toca ✓ o Enter",
+    logInstructions:"QUÉ REGISTRAR",
+    logHints:{
+      "Team Member":["Tareas fuera de tu trabajo normal","Veces que esperaste — partes, equipo, instrucciones","Problemas de calidad que encontraste","Cualquier cosa que frenó tu trabajo"],
+      "Team Leader":["Cada vez que interviniste en lugar de entrenar","Reuniones, datos que tú extrajiste","Cuando cubriste un rol de miembro","Apagando fuegos — qué pasó, qué hiciste, cuánto tardó","Interacciones de coaching"],
+      "Supervisor":["Cada gemba walk — duración y observaciones","Reuniones — ¿eras la persona correcta?","Problemas que los TLs trajeron — ¿resolviste o entrenaste?","Datos o reportes que construiste tú","Apagado de fuegos en que te involucraste","Tiempo: admin vs. piso vs. desarrollar personas"],
+      "Manager":["Reuniones que supervisores deberían dirigir","Problemas que supervisores deberían resolver","Verificar resultados vs. ejecución de trabajo estándar","Entrenar supervisores vs. hacer su trabajo","Trabajo estratégico vs. apagando fuegos"]
+    },
+    noTasks:"COMIENZA A REGISTRAR", noTasksSub:"Cada tarea — planificada o reactiva. Sé honesto.",
+    category:"Categoría", timeSpent:"Tiempo (min)", timeBin:"¿Cuándo en el turno?",
+    isFF:"¿Es apagando fuegos?", ffCause:"Causa Raíz", ffNote:"¿Qué pasó + contramedida?",
+    disposition:"Disposición", pushTo:"¿Delegar a qué nivel?",
+    pushNote:"¿Qué debe pasar para que lo asuman?", eliminateNote:"¿Por qué existe? ¿Quién lo detiene?",
+    notes:"Notas", remove:"Eliminar", yes:"Sí", no:"No",
+    wrongWork:"NO PERTENECE EN ESTE NIVEL",
+    reflectionPH:"Respuesta honesta — no la descripción del puesto, sino cómo realmente pasaste los últimos 5 días...",
+    actionPlan:"PLAN DE ACCIÓN", pushDown:"DELEGAR ABAJO", eliminate:"ELIMINAR",
+    ffAnalysis:"ANÁLISIS APAGADO FUEGOS", maintain:"MANTENER — TU TRABAJO REAL",
+    maintainSub:"Trabajo del nivel correcto. Incorpóralo en tu trabajo estándar.",
+    keyQuestion:"PREGUNTA CLAVE:", keyQuestionText:"¿Los mismos problemas siguen? El sistema está roto — no las personas. ¿Qué estándar debe cambiar?",
+    exportLSW:"Exportar TSL", noActionYet:"Registra tareas y asigna disposiciones para ver tu plan.",
+    delegateTo:"→ Delegar a:",
+    requiredTitle:"ACTIVIDADES REQUERIDAS", requiredSub:"No negociables. Construyen tu horario estándar y auditoría por capas.",
+    addRequired:"Agregar actividad requerida...",
+    freqOpts:["Cada Turno","Diario","2x al Día","3x al Día","Semanal","Mensual","Según sea necesario"],
+    weekdays:["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"],
+    timeOfDay:"Hora del día", duration:"Duración (min)", standard:"Estándar / Cómo se ve bien",
+    dayOfWeek:"Día de la semana", dayOfMonth:"Día del mes",
+    auditTier:"Verificado por (auditoría por capas)", owner:"Responsable", save:"Guardar", edit:"Editar", cancel:"Cancelar",
+    watchTitle:"VIGILANCIA CRÍTICA", watchSub:"Monitoreo SQDC. Construye tu auditoría por capas.",
+    addWatch:"Agregar elemento...", watchCat:"Categoría",
+    watchCats:["Seguridad","Calidad","Entrega","Costo"],
+    timesPerDay:"Veces por día", checkBy:"Verificado por",
+    threshold:"Umbral de alerta", thresholdPH:"ej. Desperdicio > 2%, OTD < 95%",
+    auditNote:"Acción si se supera", auditNotePH:"ej. Detener línea, llamar calidad...",
+    layeredAuditTitle:"ESTRUCTURA DE AUDITORÍA POR CAPAS",
+    lswTitle:"MI TRABAJO ESTÁNDAR DE LÍDER", lswSub:"Actividades requeridas + tareas Mantener por bloque de tiempo.",
+    noLSW:"Completa Actividades Requeridas y clasifica tareas como Mantener para construir tu TSL.",
+    lswLayeredAudit:"VERIFICACIÓN DE AUDITORÍA POR CAPAS",
+    saved:"Guardado ✓", timeBins:["Inicio de Turno","Mañana","Medio Turno","Fin de Turno","Semanal","Mensual"],
+    freq:"Frecuencia", noWatch:"Sin elementos de vigilancia.",
+    exportPickTitle:"FORMATO DE EXPORTACIÓN", exportPickSub:"Elige formato para",
+    exportPDF:"↓ PDF TRÍPTICO", exportPDFsub:"Lista para imprimir · Horizontal · Doblar en tres",
+    exportXL:"↓ EXCEL TRÍPTICO", exportXLsub:"3 columnas por panel · Abre en Excel",
+    cancelBtn:"Cancelar", aiCoach:"✦ COACH IA", aiBtn:"Analizar con Coach Lean", aiThinking:"Analizando...",
+    aiOffline:"Coach IA disponible solo dentro de Claude.ai — usa la pestaña Guía para preguntas de coaching.",
+    loggedBadge:"REGISTRADO", ffBadge:"APAGANDO FUEGOS", wlBadge:"NIVEL INCORRECTO",
+    taskCount:"TAREAS REGISTRADAS",
+  }
+};
+
+
+const state = {
+  lang: "en",
+  activeLevel: "Supervisor",
+  activeTab: "log",
+  tasksByLevel: {"Team Member":[],"Team Leader":[],"Supervisor":[],"Manager":[]},
+  requiredByLevel: {"Team Member":[],"Team Leader":[],"Supervisor":[],"Manager":[]},
+  watchByLevel: {"Team Member":[],"Team Leader":[],"Supervisor":[],"Manager":[]},
+  reflections: {},
+  expandedTasks: new Set(),
+  expandedWatch: null,
+  showLogHints: false,
+  showExportModal: false,
+  guideAI: {},
+  guideAILoading: {},
+  taskAI: {},
+  taskAILoading: {},
+  notification: null,
+  notifTimer: null,
+};
+
+function t() { return T[state.lang]; }
+function accent() { return LC[state.activeLevel]; }
+function tasks() { return state.tasksByLevel[state.activeLevel] || []; }
+function required() { return state.requiredByLevel[state.activeLevel] || []; }
+function watchItems() { return state.watchByLevel[state.activeLevel] || []; }
+
+function notify(msg) {
+  if(state.notifTimer) clearTimeout(state.notifTimer);
+  state.notification = msg;
+  render();
+  state.notifTimer = setTimeout(()=>{ state.notification=null; render(); }, 2500);
+}
+
+function autoLoadTemplate() {
+  const lvl = state.activeLevel;
+  const existing = state.requiredByLevel[lvl] || [];
+  if(existing.length > 0) return;
+  let tpl = null;
+  if(lvl === "Supervisor") tpl = (state.lang==="es"?SUPERVISOR_TEMPLATE_ES:SUPERVISOR_TEMPLATE_EN);
+  else if(lvl === "Manager") tpl = MANAGER_TEMPLATE;
+  else if(lvl === "Team Leader") tpl = TL_TEMPLATE;
+  if(tpl) state.requiredByLevel[lvl] = tpl.map(x=>({...x,id:uid()}));
+}
+
+// ─── DOM HELPERS ──────────────────────────────────────────────
+function el(tag, attrs, ...children) {
+  const e = document.createElement(tag);
+  if(attrs) Object.entries(attrs).forEach(([k,v])=>{
+    if(k==="style" && typeof v==="object") Object.assign(e.style, v);
+    else if(k.startsWith("on")) e.addEventListener(k.slice(2).toLowerCase(), v);
+    else if(k==="className") e.className = v;
+    else if(k==="htmlFor") e.htmlFor = v;
+    else e.setAttribute(k, v);
+  });
+  children.flat().forEach(c=>{
+    if(c==null||c===false) return;
+    e.appendChild(typeof c==="string"||typeof c==="number" ? document.createTextNode(String(c)) : c);
+  });
+  return e;
+}
+function div(attrs,...ch){return el("div",attrs,...ch);}
+function span(attrs,...ch){return el("span",attrs,...ch);}
+function btn(attrs,...ch){return el("button",attrs,...ch);}
+function inp(attrs){return el("input",attrs);}
+function txt(attrs,...ch){return el("textarea",attrs,...ch);}
+function sel(attrs,...ch){return el("select",attrs,...ch);}
+function opt(val,label,sel){const o=el("option",{value:val},label);if(sel)o.selected=true;return o;}
+function lbl(attrs,...ch){return el("label",attrs,...ch);}
+
+// ─── REUSABLE UI ──────────────────────────────────────────────
+function fieldGroup(labelText, child) {
+  return div({style:{marginBottom:12}},
+    lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}}, labelText),
+    child
+  );
+}
+
+function pillBtn(text, active, color, onClick) {
+  const b = btn({
+    style:{background:active?color+"33":"transparent",border:`1px solid ${active?color:"#374151"}`,
+      color:active?color:"#94a3b8",borderRadius:20,padding:"5px 12px",fontSize:11,fontWeight:700},
+    onClick
+  }, text);
+  return b;
+}
+
+function freqBadge(item) {
+  let f = item.freq || "";
+  if((f==="Weekly"||f==="Semanal") && item.dayOfWeek) f += ` · ${item.dayOfWeek}`;
+  if((f==="Monthly"||f==="Mensual") && item.dayOfMonth) f += ` · Day ${item.dayOfMonth}`;
+  if(f==="Each Shift"||f==="Cada Turno") f += " ↻";
+  return f;
+}
+
+// ─── TASK CARD ────────────────────────────────────────────────
+function renderTaskCard(task, idx, isOpen) {
+  const ac = accent();
+  const d = task.disposition ? DISPOSITIONS[task.disposition] : null;
+
+  const header = div({
+    style:{padding:"12px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:10},
+    onClick: ()=>{ isOpen ? state.expandedTasks.delete(task.id) : state.expandedTasks.add(task.id); render(); }
+  },
+    div({style:{flex:1}},
+      div({style:{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:3}},
+        span({style:{fontSize:13,color:"#f9fafb",fontWeight:500}}, task.description||"..."),
+        task.isFirefighting ? span({style:{fontSize:10,background:"#7c2d1222",color:"#f97316",border:"1px solid #f9731644",padding:"1px 7px",borderRadius:3,fontWeight:700}},"🔥") : null
+      ),
+      div({style:{display:"flex",gap:8,flexWrap:"wrap"}},
+        task.category ? span({style:{fontSize:11,color:"#6b7280"}},task.category) : null,
+        task.minutes>0 ? span({style:{fontSize:11,color:"#6b7280"}},`· ${task.minutes}min`) : null,
+        task.timeBin ? span({style:{fontSize:11,color:"#6b7280"}},`· ${task.timeBin}`) : null
+      )
+    ),
+    div({style:{display:"flex",gap:6,alignItems:"center"}},
+      d ? span({style:{background:d.bg,color:d.color,border:`1px solid ${d.color}88`,padding:"3px 9px",borderRadius:4,fontSize:11,fontWeight:700}},`${d.icon} ${d[state.lang]}`) : null,
+      span({style:{color:"#4b5563",fontSize:11}}, isOpen?"▲":"▼")
+    )
+  );
+
+  if(!isOpen) return div({className:"card", style:{border:`1px solid ${d?d.color+"55":"#1f2937"}`}}, header);
+
+  const tsk = t();
+  const catSel = sel({
+    style:{},
+    onChange: e=>{ state.tasksByLevel[state.activeLevel][idx].category=e.target.value; render(); }
+  }, opt("", tsk.category||"Category", !task.category), ...CATS[state.lang].map(c=>opt(c,c,task.category===c)));
+
+  const binSel = sel({onChange: e=>{ state.tasksByLevel[state.activeLevel][idx].timeBin=e.target.value; render(); }},
+    opt("","When?",!task.timeBin), ...tsk.timeBins.map(b=>opt(b,b,task.timeBin===b)));
+
+  const dispBtns = div({style:{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}},
+    ...Object.entries(DISPOSITIONS).map(([k,dv])=>
+      pillBtn(`${dv.icon} ${dv[state.lang]}`, task.disposition===k, dv.color, ()=>{
+        state.tasksByLevel[state.activeLevel][idx].disposition=k; render();
+      })
+    )
+  );
+
+  const aiKey = task.id;
+  const aiResp = state.taskAI[aiKey];
+  const aiLoading = state.taskAILoading[aiKey];
+
+  const body = div({style:{padding:"0 16px 16px",borderTop:"1px solid #1f2937"}},
+    div({style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginTop:14}},
+      div({style:{gridColumn:"1/-1"}},
+        lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},"Task Description"),
+        inp({value:task.description||"", style:{width:"100%"},
+          onInput: e=>{ state.tasksByLevel[state.activeLevel][idx].description=e.target.value; }})
+      ),
+      div({},lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.category),catSel),
+      div({},lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.timeSpent),
+        inp({type:"number",value:task.minutes||"",placeholder:"0",style:{width:"100%"},
+          onInput:e=>{ state.tasksByLevel[state.activeLevel][idx].minutes=parseInt(e.target.value)||0; }})
+      ),
+      div({},lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.timeBin),binSel)
+    ),
+    div({style:{marginTop:12}},
+      lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.isFF),
+      div({style:{display:"flex",gap:8}},
+        pillBtn(tsk.yes, task.isFirefighting===true, "#f97316", ()=>{ state.tasksByLevel[state.activeLevel][idx].isFirefighting=true; render(); }),
+        pillBtn(tsk.no, task.isFirefighting===false, "#6b7280", ()=>{ state.tasksByLevel[state.activeLevel][idx].isFirefighting=false; render(); })
+      )
+    ),
+    task.isFirefighting ? div({style:{marginTop:12,background:"#1c0a0288",border:"1px solid #f9731444",borderRadius:8,padding:14}},
+      lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#f97316",marginBottom:8,fontWeight:700}},`🔥 ${tsk.ffCause}`),
+      div({style:{display:"flex",flexWrap:"wrap",gap:6}},
+        ...FF_CAUSES[state.lang].map(c=>pillBtn(c, task.firefightingCause===c, "#f97316", ()=>{
+          state.tasksByLevel[state.activeLevel][idx].firefightingCause=c; render();
+        }))
+      ),
+      txt({style:{marginTop:10,height:56,width:"100%"},
+        placeholder:tsk.ffNote,
+        onInput:e=>{ state.tasksByLevel[state.activeLevel][idx].firefightingNote=e.target.value; }},
+        task.firefightingNote||"")
+    ) : null,
+    div({style:{marginTop:12}},
+      lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.disposition),
+      dispBtns,
+      task.disposition==="PUSH_DOWN" ? div({style:{marginTop:10,background:"#1c100288",border:"1px solid #d9770644",borderRadius:6,padding:12}},
+        lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#d97706",marginBottom:5,fontWeight:700}},tsk.pushTo),
+        sel({style:{},onChange:e=>{ state.tasksByLevel[state.activeLevel][idx].pushToLevel=e.target.value; render(); }},
+          opt("","Select level...",!task.pushToLevel),
+          ...LEVELS.map(l=>opt(l,LL[l][state.lang],task.pushToLevel===l))
+        ),
+        txt({style:{marginTop:8,height:50,width:"100%"},placeholder:tsk.pushNote,
+          onInput:e=>{ state.tasksByLevel[state.activeLevel][idx].pushNote=e.target.value; }},
+          task.pushNote||"")
+      ) : null,
+      task.disposition==="ELIMINATE" ? txt({style:{marginTop:8,height:50,width:"100%"},placeholder:tsk.eliminateNote,
+        onInput:e=>{ state.tasksByLevel[state.activeLevel][idx].eliminateNote=e.target.value; }},
+        task.eliminateNote||"") : null
+    ),
+    div({style:{marginTop:12}},
+      lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.notes),
+      txt({style:{height:54,width:"100%"},onInput:e=>{ state.tasksByLevel[state.activeLevel][idx].notes=e.target.value; }},task.notes||"")
+    ),
+    div({style:{marginTop:14,background:"#0a0f1a",border:`1px solid ${ac}44`,borderRadius:8,padding:12}},
+      div({style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+        span({style:{fontSize:10,letterSpacing:2,color:ac,fontWeight:700}},tsk.aiCoach),
+        btn({style:{background:ac+"22",border:`1px solid ${ac}66`,color:ac,borderRadius:6,padding:"5px 12px",fontSize:11,fontWeight:700,opacity:aiLoading?0.6:1},
+          onClick:()=>runTaskAI(task,idx)}, aiLoading?tsk.aiThinking:tsk.aiBtn)
+      ),
+      aiResp ? div({style:{fontSize:12,color:"#cbd5e1",lineHeight:1.7,marginTop:8,borderTop:`1px solid ${ac}33`,paddingTop:8}},aiResp) : null
+    ),
+    btn({style:{marginTop:10,background:"transparent",border:"1px solid #dc262644",color:"#dc2626",borderRadius:6,padding:"5px 12px",fontSize:11},
+      onClick:()=>{ state.tasksByLevel[state.activeLevel].splice(idx,1); state.expandedTasks.delete(task.id); render(); }},
+      tsk.remove)
+  );
+
+  return div({className:"card",style:{border:`1px solid ${d?d.color+"55":"#1f2937"}`}}, header, body);
+}
+
+// ─── AI COACHING ──────────────────────────────────────────────
+async function runTaskAI(task, idx) {
+  const key = task.id;
+  state.taskAILoading[key] = true; render();
+  const ctx = `Leader: ${LL[state.activeLevel]?.en}. Task: "${task.description}". Category: ${task.category||"none"}. Time: ${task.minutes||"?"}min. Firefighting: ${task.isFirefighting?"Yes":"No"}. ${task.firefightingCause?`Cause: ${task.firefightingCause}.`:""} Disposition: ${task.disposition||"unclassified"}. ${task.notes?`Notes: ${task.notes}`:""}`;
+  const sys = state.lang==="es"
+    ? "Eres consultor Lean, Six Sigma Black Belt. Retroalimentación directa. Señala trabajo en nivel incorrecto. Máximo 4 oraciones."
+    : "Senior Lean consultant, Six Sigma Black Belt. Direct, practical. Call out wrong-level work, firefighting patterns, ask one follow-up. Max 4 sentences.";
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:300,system:sys,messages:[{role:"user",content:ctx}]})});
+    const d = await r.json();
+    state.taskAI[key] = d.error ? t().aiOffline : (d.content?.[0]?.text || t().aiOffline);
+  } catch(e) { state.taskAI[key] = t().aiOffline; }
+  state.taskAILoading[key] = false; render();
+}
+
+async function runGuideAI(level, qIdx, question, reflection) {
+  const key = `${level}_${qIdx}`;
+  state.guideAILoading[key] = true; render();
+  const ctx = `Leader: ${LL[level]?.en}. Question: "${question}". Reflection: "${reflection||"(none)"}". Analyze — wrong-level work? Firefighting patterns? One follow-up question.`;
+  const sys = state.lang==="es"
+    ? "Eres consultor Lean, Six Sigma Black Belt. Máximo 4 oraciones."
+    : "Senior Lean consultant, Six Sigma Black Belt. Max 4 sentences.";
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:300,system:sys,messages:[{role:"user",content:ctx}]})});
+    const d = await r.json();
+    state.guideAI[key] = d.error ? t().aiOffline : (d.content?.[0]?.text || t().aiOffline);
+  } catch(e) { state.guideAI[key] = t().aiOffline; }
+  state.guideAILoading[key] = false; render();
+}
+
+// ─── REQUIRED CARD ────────────────────────────────────────────
+function renderRequiredCard(item, idx) {
+  const ac = accent();
+  const tsk = t();
+  const isWeekly = item.freq==="Weekly"||item.freq==="Semanal";
+  const isMonthly = item.freq==="Monthly"||item.freq==="Mensual";
+
+  function update(key, val) {
+    state.requiredByLevel[state.activeLevel][idx][key] = val; render();
+  }
+
+  const card = div({className:"card",style:{padding:16,border:`1px solid ${ac}33`}},
+    div({style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10}},
+      div({style:{gridColumn:"1/-1"}},
+        lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},"Description"),
+        inp({value:item.text||"",style:{width:"100%"},onInput:e=>update("text",e.target.value)})
+      ),
+      div({},
+        lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.freq),
+        sel({style:{},onChange:e=>update("freq",e.target.value)},
+          opt("","Select...",!item.freq), ...tsk.freqOpts.map(f=>opt(f,f,item.freq===f)))
+      ),
+      isWeekly ? div({},
+        lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.dayOfWeek),
+        sel({style:{},onChange:e=>update("dayOfWeek",e.target.value)},
+          opt("","Select...",!item.dayOfWeek), ...tsk.weekdays.map(d=>opt(d,d,item.dayOfWeek===d)))
+      ) : null,
+      isMonthly ? div({},
+        lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.dayOfMonth),
+        inp({type:"number",min:1,max:31,value:item.dayOfMonth||"",placeholder:"1-31",style:{width:"100%"},onInput:e=>update("dayOfMonth",e.target.value)})
+      ) : null,
+      div({},
+        lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.timeOfDay),
+        inp({value:item.timeOfDay||"",placeholder:"06:30",style:{width:"100%"},onInput:e=>update("timeOfDay",e.target.value)})
+      ),
+      div({},
+        lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.duration),
+        inp({type:"number",value:item.duration||"",style:{width:"100%"},onInput:e=>update("duration",e.target.value)})
+      ),
+      div({},
+        lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.owner),
+        inp({value:item.owner||"",style:{width:"100%"},onInput:e=>update("owner",e.target.value)})
+      ),
+      div({style:{gridColumn:"1/-1"}},
+        lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.standard),
+        txt({style:{height:54,width:"100%"},onInput:e=>update("standard",e.target.value)},item.standard||"")
+      ),
+      div({style:{gridColumn:"1/-1"}},
+        lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.auditTier),
+        div({style:{display:"flex",gap:6,flexWrap:"wrap",marginTop:4}},
+          ...LEVELS.map(l=>pillBtn(LL[l][state.lang], (item.auditTier||[]).includes(l), LC[l], ()=>{
+            const at = [...(item.auditTier||[])];
+            const i2 = at.indexOf(l);
+            i2>=0 ? at.splice(i2,1) : at.push(l);
+            update("auditTier", at);
+          }))
+        )
+      )
+    ),
+    div({style:{display:"flex",justifyContent:"flex-end",marginTop:10}},
+      btn({style:{background:"transparent",border:"none",color:"#4b5563",fontSize:12,padding:"4px 8px"},
+        onClick:()=>{ state.requiredByLevel[state.activeLevel].splice(idx,1); render(); }},
+        "✕ Remove")
+    )
+  );
+  return card;
+}
+
+// ─── TAB RENDERERS ────────────────────────────────────────────
+function renderLog() {
+  const tsk = t(); const ac = accent();
+  const taskList = tasks();
+  const totalMins = taskList.reduce((s,x)=>s+(x.minutes||0),0);
+  const ffMins = taskList.filter(x=>x.isFirefighting).reduce((s,x)=>s+(x.minutes||0),0);
+  const wlMins = taskList.filter(x=>x.disposition==="PUSH_DOWN").reduce((s,x)=>s+(x.minutes||0),0);
+
+  let descVal = "";
+  const descInp = inp({
+    placeholder: tsk.addTask, style:{flex:1,fontSize:13},
+    onInput: e=>{ descVal=e.target.value; addBtn.style.background=descVal.trim()?ac:"#1f2937"; addBtn.style.color=descVal.trim()?"#000":"#374151"; },
+    onKeydown: e=>{ if(e.key==="Enter"){ addTask(descVal); descInp.value=""; descVal=""; addBtn.style.background="#1f2937"; addBtn.style.color="#374151"; }}
+  });
+  const addBtn = btn({
+    style:{background:"#1f2937",border:"none",color:"#374151",borderRadius:6,padding:"0 18px",fontSize:18,fontWeight:900,minWidth:48},
+    onClick:()=>{ if(descVal.trim()){ addTask(descVal); descInp.value=""; descVal=""; addBtn.style.background="#1f2937"; addBtn.style.color="#374151"; }}
+  }, "✓");
+
+  function addTask(desc) {
+    if(!desc.trim()) return;
+    const id = uid();
+    state.tasksByLevel[state.activeLevel].push({id,description:desc,category:"",minutes:0,isFirefighting:false,disposition:null,notes:"",timeBin:""});
+    state.expandedTasks.add(id);
+    render();
+  }
+
+  const hintsOpen = state.showLogHints;
+  const hints = div({style:{background:"#0a0f1a",border:`1px solid ${ac}44`,borderRadius:10,marginBottom:16,overflow:"hidden"}},
+    btn({style:{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",background:"transparent",border:"none",color:ac,fontSize:10,letterSpacing:2,fontWeight:700},
+      onClick:()=>{ state.showLogHints=!state.showLogHints; render(); }},
+      span({},"? "+tsk.logInstructions+" — "+(LL[state.activeLevel][state.lang]||"").toUpperCase()),
+      span({},hintsOpen?"▲":"▼")
+    ),
+    hintsOpen ? div({style:{padding:"0 16px 16px",borderTop:`1px solid ${ac}22`}},
+      ...(tsk.logHints[state.activeLevel]||[]).map(h=>
+        div({style:{display:"flex",gap:8,marginTop:8}},
+          span({style:{color:ac,flexShrink:0}},"·"),
+          span({style:{fontSize:12,color:"#94a3b8",lineHeight:1.6}},h)
+        )
+      )
+    ) : null
+  );
+
+  const cards = taskList.length===0
+    ? div({style:{textAlign:"center",padding:"50px 0",color:"#1f2937"}},
+        div({style:{fontSize:36,marginBottom:10}},"📋"),
+        div({style:{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,letterSpacing:2,color:"#374151"}},tsk.noTasks),
+        div({style:{fontSize:11,marginTop:6,color:"#1f2937"}},tsk.noTasksSub)
+      )
+    : div({},
+        div({style:{fontSize:10,color:"#4b5563",letterSpacing:1,marginBottom:10}},`${taskList.length} ${tsk.taskCount}`),
+        ...taskList.map((task,i)=>renderTaskCard(task,i,state.expandedTasks.has(task.id)))
+      );
+
+  return div({className:"fade"},
+    hints,
+    div({style:{display:"flex",gap:10,marginBottom:20}}, descInp, addBtn),
+    cards
+  );
+}
+
+function renderLSW() {
+  const tsk = t(); const ac = accent();
+  const req = required(); const taskList = tasks();
+  const bins = tsk.timeBins;
+
+  if(req.length===0 && taskList.filter(x=>x.disposition==="MAINTAIN").length===0) {
+    return div({className:"fade",style:{textAlign:"center",color:"#374151",padding:40,fontSize:12}},tsk.noLSW);
+  }
+
+  const sections = bins.map(bin=>{
+    const reqItems = req.filter(r=>{
+      const f = r.freq||"";
+      if(bin===bins[5]) return f==="Monthly"||f==="Mensual";
+      if(bin===bins[4]) return f==="Weekly"||f==="Semanal";
+      if(bin===bins[0]) return r.timeBin===bins[0]||((f.includes("Shift")||f.includes("Turno"))&&r.timeBin!==bins[3]);
+      return r.timeBin===bin;
+    });
+    const taskItems = taskList.filter(x=>x.disposition==="MAINTAIN"&&x.timeBin===bin);
+    return {bin,reqItems,taskItems};
+  }).filter(s=>s.reqItems.length||s.taskItems.length);
+
+  const lswItems = sections.map(s=>
+    div({style:{marginBottom:20}},
+      div({style:{fontSize:10,letterSpacing:2,color:ac,fontWeight:700,marginBottom:8,paddingBottom:6,borderBottom:`1px solid ${ac}33`}},s.bin.toUpperCase()),
+      ...s.reqItems.map(r=>
+        div({style:{display:"flex",gap:10,padding:"11px 14px",background:"#0f172a",border:`1px solid ${ac}33`,borderRadius:8,marginBottom:6,alignItems:"flex-start"}},
+          div({style:{minWidth:48,textAlign:"center",background:ac+"22",borderRadius:6,padding:"4px 6px",flexShrink:0}},
+            div({style:{fontSize:10,color:ac,fontWeight:700}},r.timeOfDay||"—"),
+            r.duration ? div({style:{fontSize:9,color:"#6b7280"}},`${r.duration}m`) : null
+          ),
+          div({style:{flex:1,minWidth:0}},
+            div({style:{fontSize:13,color:"#f9fafb",fontWeight:500,marginBottom:3}},r.text),
+            r.standard ? div({style:{fontSize:11,color:"#6b7280",fontStyle:"italic",marginBottom:3}},`→ ${r.standard}`) : null,
+            (r.auditTier||[]).length ? div({style:{display:"flex",gap:4,flexWrap:"wrap",marginTop:3}},
+              span({style:{fontSize:9,color:"#a855f7",letterSpacing:1,marginRight:2}},"🏗 VERIFY:"),
+              ...r.auditTier.map(l=>span({style:{fontSize:9,background:LC[l]+"33",color:LC[l],border:`1px solid ${LC[l]}44`,padding:"1px 6px",borderRadius:3}},LL[l][state.lang]))
+            ) : null
+          ),
+          div({style:{flexShrink:0}},
+            span({style:{fontSize:9,background:ac+"22",color:ac,border:`1px solid ${ac}44`,padding:"2px 7px",borderRadius:3,whiteSpace:"nowrap"}},freqBadge(r)),
+            div({style:{width:22,height:22,border:"2px solid #374151",borderRadius:4,background:"#0a0f1a",marginTop:4}})
+          )
+        )
+      ),
+      ...s.taskItems.map(x=>
+        div({style:{display:"flex",gap:10,padding:"10px 14px",background:"#052e1622",border:"1px solid #16a34a33",borderRadius:8,marginBottom:6,alignItems:"center"}},
+          span({style:{color:"#16a34a",fontSize:14,flexShrink:0}},"✓"),
+          div({style:{flex:1}},
+            div({style:{fontSize:13,color:"#f9fafb"}},x.description),
+            x.category ? div({style:{fontSize:11,color:"#6b7280",marginTop:1}},`${x.category}${x.minutes?` · ${x.minutes}min`:""}`) : null
+          ),
+          div({style:{width:22,height:22,border:"2px solid #374151",borderRadius:4,background:"#0a0f1a",flexShrink:0}})
+        )
+      )
+    )
+  );
+
+  // Layered audit summary
+  const auditItems = req.filter(r=>(r.auditTier||[]).length>0);
+  const auditSection = auditItems.length ? div({style:{marginTop:8,background:"#0a0f1a",border:"1px solid #a855f744",borderRadius:12,padding:18}},
+    div({style:{fontSize:10,letterSpacing:2,color:"#a855f7",fontWeight:700,marginBottom:4}},"🏗 "+tsk.lswLayeredAudit),
+    div({style:{fontSize:11,color:"#6b7280",marginBottom:14}},tsk.lswTitle),
+    ...[...LEVELS].reverse().map(level=>{
+      const lvlItems = auditItems.filter(r=>r.auditTier.includes(level));
+      if(!lvlItems.length) return null;
+      return div({style:{display:"flex",gap:10,marginBottom:10,alignItems:"flex-start"}},
+        div({style:{minWidth:80,fontSize:9,color:LC[level],fontWeight:700,letterSpacing:1,background:LC[level]+"22",border:`1px solid ${LC[level]}44`,borderRadius:4,padding:"3px 8px",textAlign:"center",flexShrink:0}},LL[level][state.lang].toUpperCase()),
+        div({style:{flex:1}},
+          ...lvlItems.map(r=>div({style:{display:"flex",gap:6,alignItems:"center",marginBottom:4}},
+            div({style:{width:5,height:5,borderRadius:"50%",background:LC[level],flexShrink:0}}),
+            span({style:{fontSize:12,color:"#94a3b8"}},r.text),
+            span({style:{fontSize:9,color:"#4b5563"}},`· ${freqBadge(r)}`)
+          ))
+        )
+      );
+    }).filter(Boolean)
+  ) : null;
+
+  return div({className:"fade"},
+    div({style:{marginBottom:16}},
+      div({style:{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:800,letterSpacing:2,color:ac,marginBottom:4}},tsk.lswTitle),
+      div({style:{fontSize:11,color:"#6b7280"}},tsk.lswSub)
+    ),
+    ...lswItems,
+    auditSection
+  );
+}
+
+function renderRequired() {
+  const tsk = t(); const ac = accent(); const req = required();
+  let newText = "";
+  const addInp = inp({placeholder:tsk.addRequired,style:{flex:1},
+    onInput:e=>newText=e.target.value,
+    onKeydown:e=>{ if(e.key==="Enter"&&newText.trim()){ addReq(); }}
+  });
+  function addReq() {
+    if(!newText.trim()) return;
+    state.requiredByLevel[state.activeLevel].push({id:uid(),text:newText,freq:"",timeOfDay:"",duration:"",owner:"",standard:"",dayOfWeek:"",dayOfMonth:"",auditTier:[]});
+    newText=""; addInp.value=""; render();
+  }
+  return div({className:"fade"},
+    div({style:{fontSize:12,color:"#6b7280",marginBottom:16,lineHeight:1.7}},tsk.requiredSub),
+    div({style:{background:"#0f172a",border:`1px solid ${ac}44`,borderRadius:10,padding:14,marginBottom:16}},
+      div({style:{display:"flex",gap:10,marginBottom:8}},
+        addInp,
+        btn({style:{background:ac,border:"none",color:"#000",borderRadius:6,padding:"0 14px",fontSize:12,fontWeight:700,whiteSpace:"nowrap"},onClick:addReq},"Add")
+      )
+    ),
+    req.length===0
+      ? div({style:{textAlign:"center",color:"#374151",padding:30,fontSize:12}},"Add your first activity above.")
+      : div({},
+          ...req.map((r,i)=>renderRequiredCard(r,i))
+        )
+  );
+}
+
+function renderWatch() {
+  const tsk = t(); const ac = accent(); const watch = watchItems();
+  const newW = {text:"",cat:"",threshold:"",checkBy:[],timesPerDay:1,auditNote:""};
+  let newWText="",newWCat="",newWThresh="",newWTimes=1,newWNote="";
+
+  function addWatch() {
+    if(!newWText.trim()) return;
+    state.watchByLevel[state.activeLevel].push({id:uid(),text:newWText,cat:newWCat,threshold:newWThresh,checkBy:[...newWCheckBy],timesPerDay:newWTimes,auditNote:newWNote});
+    newWText=""; addWInp.value=""; render();
+  }
+  let newWCheckBy = [];
+
+  const addWInp = inp({placeholder:tsk.addWatch,style:{flex:1},onInput:e=>newWText=e.target.value,onKeydown:e=>{ if(e.key==="Enter") addWatch(); }});
+  const addForm = div({style:{background:"#0f172a",border:"1px solid #1f2937",borderRadius:10,padding:14,marginBottom:16}},
+    div({style:{display:"flex",gap:10,marginBottom:10}}, addWInp,
+      btn({style:{background:ac,border:"none",color:"#000",borderRadius:6,padding:"0 14px",fontSize:12,fontWeight:700,whiteSpace:"nowrap"},onClick:addWatch},"Add")
+    ),
+    div({style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
+      div({},lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.watchCat),
+        sel({style:{},onChange:e=>newWCat=e.target.value},opt("","Category"),
+          ...tsk.watchCats.map(c=>opt(c,c)))
+      ),
+      div({},lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.timesPerDay),
+        inp({type:"number",min:1,value:1,style:{width:"100%"},onInput:e=>newWTimes=parseInt(e.target.value)||1})
+      ),
+      div({style:{gridColumn:"1/-1"}},lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.threshold),
+        inp({placeholder:tsk.thresholdPH,style:{width:"100%"},onInput:e=>newWThresh=e.target.value})
+      ),
+      div({style:{gridColumn:"1/-1"}},lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},tsk.checkBy),
+        div({style:{display:"flex",gap:6,flexWrap:"wrap",marginTop:4}},
+          ...LEVELS.map(l=>{
+            let active=false;
+            const b=pillBtn(LL[l][state.lang],false,LC[l],()=>{
+              active=!active;
+              if(active){newWCheckBy.push(l);b.style.background=LC[l]+"33";b.style.borderColor=LC[l];b.style.color=LC[l];}
+              else{newWCheckBy=newWCheckBy.filter(x=>x!==l);b.style.background="transparent";b.style.borderColor="#374151";b.style.color="#94a3b8";}
+            });
+            return b;
+          })
+        )
+      )
+    )
+  );
+
+  const watchCards = watch.length===0
+    ? div({style:{textAlign:"center",color:"#374151",padding:30,fontSize:12}},tsk.noWatch)
+    : div({},
+        ...tsk.watchCats.map(cat=>{
+          const catItems = watch.filter(w=>w.cat===cat||w.cat===tsk.watchCats[["Safety","Quality","Delivery","Cost"].indexOf(cat)]);
+          // match both EN and ES
+          const allCatItems = watch.filter(w=>{
+            const wcat = w.cat||"";
+            return wcat===cat||wcat===["Safety","Quality","Delivery","Cost"][tsk.watchCats.indexOf(cat)];
+          });
+          if(!allCatItems.length) return null;
+          const wc = WATCH_COLORS[cat]||WATCH_COLORS[tsk.watchCats[["Safety","Quality","Delivery","Cost"].indexOf(cat)]]||"#6b7280";
+          return div({style:{marginBottom:18}},
+            div({style:{fontSize:10,letterSpacing:2,color:wc,fontWeight:700,marginBottom:8,display:"flex",alignItems:"center",gap:8}},
+              div({style:{width:8,height:8,borderRadius:"50%",background:wc}}), cat+" ("+allCatItems.length+")"
+            ),
+            ...allCatItems.map((w,wi)=>div({className:"card",style:{border:`1px solid ${wc}44`,padding:"12px 16px",marginBottom:8,cursor:"pointer"},
+              onClick:()=>{ state.expandedWatch=state.expandedWatch===w.id?null:w.id; render(); }},
+              div({style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+                div({},
+                  div({style:{fontSize:13,color:"#f9fafb"}},w.text),
+                  div({style:{display:"flex",gap:8,marginTop:4,flexWrap:"wrap"}},
+                    w.threshold?span({style:{fontSize:11,color:wc}},`⚡ ${w.threshold}`):null,
+                    span({style:{fontSize:10,color:"#6b7280"}},`· ${w.timesPerDay||1}x/day`),
+                    (w.checkBy||[]).length?span({style:{fontSize:10,color:"#a855f7"}},`· ${w.checkBy.map(l=>LL[l][state.lang]).join(", ")}`):null
+                  )
+                ),
+                span({style:{color:"#4b5563",fontSize:11}},state.expandedWatch===w.id?"▲":"▼")
+              ),
+              state.expandedWatch===w.id ? div({style:{marginTop:12,borderTop:"1px solid #1f2937",paddingTop:12}},
+                btn({style:{background:"transparent",border:"1px solid #dc262644",color:"#dc2626",borderRadius:6,padding:"5px 12px",fontSize:11},
+                  onClick:e=>{e.stopPropagation();const wi2=state.watchByLevel[state.activeLevel].findIndex(x=>x.id===w.id);if(wi2>=0){state.watchByLevel[state.activeLevel].splice(wi2,1);}state.expandedWatch=null;render();}},
+                  tsk.remove)
+              ) : null
+            ))
+          );
+        }).filter(Boolean),
+        // Layered audit structure
+        watch.some(w=>(w.checkBy||[]).length>0) ? div({style:{marginTop:20,background:"#0a0f1a",border:`1px solid ${ac}44`,borderRadius:12,padding:18}},
+          div({style:{fontSize:10,letterSpacing:2,color:ac,fontWeight:700,marginBottom:4}},"🏗 "+tsk.layeredAuditTitle),
+          ...[...LEVELS].reverse().map(level=>{
+            const assigned=watch.filter(w=>(w.checkBy||[]).includes(level));
+            if(!assigned.length) return null;
+            return div({style:{display:"flex",gap:10,marginBottom:10,alignItems:"flex-start"}},
+              div({style:{minWidth:80,fontSize:9,color:LC[level],fontWeight:700,letterSpacing:1,background:LC[level]+"22",border:`1px solid ${LC[level]}44`,borderRadius:4,padding:"3px 8px",textAlign:"center",flexShrink:0}},LL[level][state.lang].toUpperCase()),
+              div({style:{flex:1}},
+                ...assigned.map(w=>div({style:{display:"flex",gap:8,alignItems:"center",marginBottom:4}},
+                  div({style:{width:5,height:5,borderRadius:"50%",background:WATCH_COLORS[w.cat]||"#6b7280",flexShrink:0}}),
+                  span({style:{fontSize:12,color:"#94a3b8"}},w.text),
+                  span({style:{fontSize:10,color:"#4b5563"}},`· ${w.timesPerDay||1}x/day`)
+                ))
+              )
+            );
+          }).filter(Boolean)
+        ) : null
+      );
+
+  return div({className:"fade"},
+    div({style:{fontSize:12,color:"#6b7280",marginBottom:16,lineHeight:1.7}},tsk.watchSub),
+    addForm, watchCards
+  );
+}
+
+function renderGuide() {
+  const tsk = t(); const ac = accent();
+  const qs = (GUIDE_QS[state.activeLevel]||{})[state.lang]||[];
+  const wl = (WRONG_LEVEL[state.activeLevel]||{})[state.lang]||[];
+
+  return div({className:"fade"},
+    div({style:{background:"#0a1020",border:"1px solid #1f2937",borderRadius:10,padding:14,marginBottom:20}},
+      div({style:{fontSize:12,color:"#6b7280",lineHeight:1.7}},
+        state.lang==="en"
+          ? "Gemba questions. Answer as how you actually spent your last 5 days — not your job description. The gap between those two things is the work."
+          : "Preguntas gemba. Responde como realmente pasaste tus últimos 5 días — no tu descripción del puesto."
+      )
+    ),
+    ...qs.map((q,i)=>{
+      const key = `${state.activeLevel}_${i}`;
+      const refKey = key;
+      const aiResp = state.guideAI[key];
+      const aiLoad = state.guideAILoading[key];
+      const refTA = txt({style:{height:70,width:"100%"},
+        placeholder:tsk.reflectionPH,
+        onInput:e=>{ state.reflections[refKey]=e.target.value; }},
+        state.reflections[refKey]||"");
+      return div({style:{background:"#0f172a",border:"1px solid #1f2937",borderRadius:10,padding:16,marginBottom:10}},
+        div({style:{display:"flex",gap:10,marginBottom:12}},
+          span({style:{color:ac,fontSize:16,marginTop:1,flexShrink:0}},"→"),
+          div({style:{fontSize:13,color:"#e2e8f0",lineHeight:1.6}},q)
+        ),
+        lbl({style:{display:"block",fontSize:10,letterSpacing:"1.5px",color:"#94a3b8",marginBottom:5,fontWeight:700}},"Your reflection:"),
+        refTA,
+        div({style:{marginTop:10,display:"flex",justifyContent:"flex-end"}},
+          btn({style:{background:ac+"22",border:`1px solid ${ac}66`,color:ac,borderRadius:6,padding:"5px 12px",fontSize:11,fontWeight:700,opacity:aiLoad?0.6:1},
+            onClick:()=>runGuideAI(state.activeLevel,i,q,state.reflections[refKey])},
+            aiLoad?tsk.aiThinking:tsk.aiBtn)
+        ),
+        aiResp ? div({style:{marginTop:10,background:"#0a0f1a",border:`1px solid ${ac}44`,borderRadius:8,padding:12}},
+          div({style:{fontSize:9,letterSpacing:2,color:ac,fontWeight:700,marginBottom:6}},tsk.aiCoach),
+          div({style:{fontSize:12,color:"#cbd5e1",lineHeight:1.7}},aiResp)
+        ) : null
+      );
+    }),
+    wl.length ? div({style:{background:"#1c020244",border:"1px solid #dc262633",borderRadius:10,padding:16,marginTop:20}},
+      div({style:{fontSize:10,letterSpacing:2,color:"#dc2626",marginBottom:12,fontWeight:700}},"⚠ "+tsk.wrongWork),
+      ...wl.map(w=>div({style:{display:"flex",gap:8,marginBottom:7}},
+        span({style:{color:"#dc2626",flexShrink:0}},"✕"),
+        span({style:{fontSize:12,color:"#9ca3af"}},w)
+      ))
+    ) : null
+  );
+}
+
+function renderAnalyze() {
+  const tsk = t(); const ac = accent();
+  const taskList = tasks();
+  const totalMins = taskList.reduce((s,x)=>s+(x.minutes||0),0);
+  const ffMins = taskList.filter(x=>x.isFirefighting).reduce((s,x)=>s+(x.minutes||0),0);
+
+  return div({className:"fade"},
+    div({style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(90px,1fr))",gap:8,marginBottom:24}},
+      ...Object.entries(DISPOSITIONS).map(([k,dv])=>{
+        const mins=taskList.filter(x=>x.disposition===k).reduce((s,x)=>s+(x.minutes||0),0);
+        return div({style:{background:dv.bg,border:`1px solid ${dv.color}55`,borderRadius:8,padding:"12px 8px",textAlign:"center"}},
+          div({style:{fontSize:16}},dv.icon),
+          div({style:{fontSize:9,color:dv.color,fontWeight:700,letterSpacing:.5,margin:"4px 0"}},dv[state.lang]),
+          div({style:{fontSize:18,fontWeight:700,color:"#f9fafb"}},`${mins}m`),
+          div({style:{fontSize:10,color:"#6b7280"}},`${totalMins?Math.round((mins/totalMins)*100):0}%`)
+        );
+      })
+    ),
+    totalMins>0 ? div({},
+      div({style:{fontSize:10,letterSpacing:2,color:"#6b7280",marginBottom:14,fontWeight:700}},"TIME BY CATEGORY"),
+      ...CATS[state.lang].map((cat,i)=>{
+        const enCat=CATS.en[i];
+        const m=taskList.filter(x=>x.category===enCat||x.category===cat).reduce((s,x)=>s+(x.minutes||0),0);
+        if(!m) return null;
+        const pct=Math.round((m/totalMins)*100);
+        return div({style:{marginBottom:8}},
+          div({style:{display:"flex",justifyContent:"space-between",fontSize:12,color:"#94a3b8",marginBottom:4}},
+            span({},cat), span({style:{color:"#6b7280"}},`${m}m · ${pct}%`)
+          ),
+          div({style:{height:5,background:"#1f2937",borderRadius:3}},
+            div({style:{width:`${pct}%`,height:"100%",background:ac,borderRadius:3}})
+          )
+        );
+      }).filter(Boolean)
+    ) : null,
+    div({style:{fontSize:10,letterSpacing:2,color:"#6b7280",marginBottom:14,fontWeight:700,marginTop:24}},"ALL LEVELS"),
+    div({style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}},
+      ...LEVELS.map(l=>{
+        const lt=state.tasksByLevel[l]||[];
+        const lm=lt.reduce((s,x)=>s+(x.minutes||0),0);
+        const lff=lt.filter(x=>x.isFirefighting).reduce((s,x)=>s+(x.minutes||0),0);
+        return div({style:{background:"#0f172a",border:`1px solid ${lt.length>0?LC[l]+"55":"#1f2937"}`,borderRadius:10,padding:14,cursor:"pointer"},
+          onClick:()=>{ state.activeLevel=l; state.activeTab="log"; render(); }},
+          div({style:{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,fontWeight:800,letterSpacing:2,color:LC[l],marginBottom:6}},LL[l][state.lang].toUpperCase()),
+          div({style:{fontSize:11,color:"#6b7280"}},`${lt.length} tasks · ${lm}m`),
+          lff>0&&lm>0?div({style:{fontSize:11,color:"#f97316",marginTop:4}},`🔥 ${Math.round((lff/lm)*100)}%`):null,
+          lt.filter(x=>x.disposition==="PUSH_DOWN").length>0?div({style:{fontSize:11,color:"#d97706",marginTop:2}},`↓ ${lt.filter(x=>x.disposition==="PUSH_DOWN").length} to push`):null,
+          lt.length===0?div({style:{fontSize:10,color:"#374151",marginTop:4}},"No tasks — tap to add"):null
+        );
+      })
+    )
+  );
+}
+
+function renderAction() {
+  const tsk = t(); const ac = accent();
+  const taskList = tasks();
+  const hasAction = taskList.some(x=>x.disposition);
+  if(!hasAction) return div({className:"fade"},div({style:{fontSize:13,color:"#4b5563"}},tsk.noActionYet));
+
+  return div({className:"fade"},
+    div({style:{display:"flex",justifyContent:"flex-end",marginBottom:18}},
+      btn({style:{background:ac+"22",border:`1px solid ${ac}66`,color:ac,borderRadius:6,padding:"8px 16px",fontSize:11,fontWeight:700,letterSpacing:1},
+        onClick:()=>{ state.showExportModal=true; render(); }},
+        `↓ ${tsk.exportLSW} (${LL[state.activeLevel][state.lang]})`)
+    ),
+    ...[["MAINTAIN",tsk.maintain,tsk.maintainSub],["PUSH_DOWN",tsk.pushDown,null],["ELIMINATE",tsk.eliminate,null],["FIREFIGHTING",tsk.ffAnalysis,null],["ESCALATE","ESCALATE",null]].map(([key,title,sub])=>{
+      const dv = DISPOSITIONS[key];
+      const group = key==="FIREFIGHTING"
+        ? taskList.filter(x=>x.isFirefighting)
+        : taskList.filter(x=>x.disposition===key&&!x.isFirefighting);
+      if(!group.length) return null;
+      return div({style:{background:"#0a0f1a",border:`1px solid ${dv.color}55`,borderRadius:10,padding:16,marginBottom:14}},
+        div({style:{fontSize:10,letterSpacing:2,color:dv.color,fontWeight:700,marginBottom:12}},`${dv.icon} ${title} (${group.length})`),
+        sub?div({style:{fontSize:11,color:"#6b7280",marginBottom:10}},sub):null,
+        key==="FIREFIGHTING"?div({style:{background:"#1c0a0244",border:"1px solid #f9731633",borderRadius:8,padding:12,marginBottom:12}},
+          div({style:{fontSize:10,color:"#f97316",fontWeight:700}},tsk.keyQuestion),
+          div({style:{fontSize:12,color:"#9ca3af",marginTop:4,lineHeight:1.6}},tsk.keyQuestionText)
+        ):null,
+        ...group.map(task=>div({style:{borderBottom:"1px solid #0f1925",paddingBottom:9,marginBottom:9}},
+          div({style:{fontSize:13,color:"#f9fafb"}},task.description,
+            task.minutes?span({style:{color:"#4b5563",fontSize:11}},` (${task.minutes}m)`):null
+          ),
+          task.pushToLevel?div({style:{fontSize:11,color:"#d97706",marginTop:3}},`${tsk.delegateTo} ${LL[task.pushToLevel]?.[state.lang]||task.pushToLevel}`):null,
+          task.pushNote?div({style:{fontSize:11,color:"#6b7280",marginTop:2}},task.pushNote):null,
+          task.eliminateNote?div({style:{fontSize:11,color:"#6b7280",marginTop:2}},task.eliminateNote):null,
+          task.firefightingCause?div({style:{fontSize:11,color:"#f97316",marginTop:2}},`Cause: ${task.firefightingCause}`):null,
+          task.notes?div({style:{fontSize:11,color:"#6b7280",marginTop:2,fontStyle:"italic"}},task.notes):null
+        ))
+      );
+    }).filter(Boolean)
+  );
+}
+
+// ─── EXPORT FUNCTIONS ──────────────────────────────────────────
+// ─── EXPORT HELPERS ──────────────────────────────────────────
+const dlBlob=(blob,name)=>{const a=Object.assign(document.createElement("a"),{href:URL.createObjectURL(blob),download:name});a.click();URL.revokeObjectURL(a.href);};
+
+const freqLabel=(r)=>{
+  let f=r.freq||"";
+  if((f==="Weekly"||f==="Semanal")&&r.dayOfWeek) f+=` (${r.dayOfWeek})`;
+  if((f==="Monthly"||f==="Mensual")&&r.dayOfMonth) f+=` Day ${r.dayOfMonth}`;
+  return f;
+};
+
+// ─── PDF TRIFOLD ──────────────────────────────────────────────
+const exportPDFTrifold=(tasks,required,watchItems,level,lang,t,levelAccent)=>{
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:"landscape",unit:"mm",format:"letter"});
+  const W=279.4,H=215.9,PW=W/3;
+  const PAD=5,FW=PW-(PAD*2);
+  const NAVY=[20,40,80],WHITE=[255,255,255],LIGHT=[248,250,252];
+  const BORDER=[203,213,225],TEXT=[30,41,59],MUTED=[100,116,139],BLUE=[37,99,235];
+  const GREEN=[22,163,74],RED=[220,38,38];
+  const dateStr=new Date().toLocaleDateString(lang==="es"?"es-MX":"en-US",{month:"short",day:"numeric",year:"numeric"});
+  const levelName=LL[level]?.[lang]||level;
+
+  const panelBg=(x)=>{doc.setFillColor(...WHITE);doc.rect(x,0,PW,H,"F");doc.setDrawColor(...BORDER);doc.setLineWidth(0.3);doc.line(x+PW,0,x+PW,H);};
+  const hdr=(x,text,sub)=>{
+    doc.setFillColor(...NAVY);doc.rect(x,0,PW,12,"F");
+    doc.setTextColor(...WHITE);doc.setFont("helvetica","bold");doc.setFontSize(9);
+    doc.text(text,x+PW/2,5.5,{align:"center"});
+    if(sub){doc.setFontSize(6);doc.setFont("helvetica","normal");doc.text(sub,x+PW/2,9.5,{align:"center"});}
+  };
+  const lbl=(text,x,y)=>{doc.setFont("helvetica","bold");doc.setFontSize(6);doc.setTextColor(...MUTED);doc.text(text.toUpperCase(),x,y);};
+  const line=(x,y,w)=>{doc.setDrawColor(...BORDER);doc.setLineWidth(0.3);doc.line(x,y,x+w,y);};
+  const box=(x,y,w,h)=>{doc.setDrawColor(...BORDER);doc.setLineWidth(0.2);doc.setFillColor(...LIGHT);doc.roundedRect(x,y,w,h,1,1,"FD");};
+  const body=(text,x,y,mw,sz=8)=>{
+    if(!text)return;
+    doc.setFont("helvetica","normal");doc.setFontSize(sz);doc.setTextColor(...TEXT);
+    doc.text(doc.splitTextToSize(String(text),mw),x,y);
+  };
+
+  // ── PANEL 1: FRONT COVER ──
+  panelBg(0);hdr(0,t.appTitle,t.lswTitle||"Daily Standard Work");
+  let y=16;
+  lbl(lang==="es"?"NIVEL":"LEVEL",PAD,y);y+=3;
+  doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(...NAVY);
+  doc.text(levelName,PAD,y);line(PAD,y+1,FW);y+=7;
+  lbl(lang==="es"?"FECHA":"DATE",PAD,y);lbl(lang==="es"?"TURNO":"SHIFT",PAD+FW/2,y);y+=3;
+  line(PAD,y+1,FW/2-2);line(PAD+FW/2,y+1,FW/2);y+=7;
+  lbl(lang==="es"?"NOMBRE DEL LÍDER":"LEADER NAME",PAD,y);y+=3;
+  line(PAD,y+1,FW);y+=7;
+  lbl(lang==="es"?"DEPARTAMENTO / LÍNEA":"DEPARTMENT / LINE",PAD,y);y+=3;
+  line(PAD,y+1,FW);y+=8;
+  lbl(lang==="es"?"PROBLEMAS / NOTAS DEL DÍA":"DAILY ISSUES / NOTES",PAD,y);y+=3;
+  box(PAD,y,FW,30);y+=34;
+  lbl(lang==="es"?"FIRMA":"SIGNATURE",PAD,y);y+=3;
+  doc.setDrawColor(...NAVY);doc.setLineWidth(0.5);doc.line(PAD,y,PAD+FW,y);y+=10;
+  // SQDC
+  lbl("SQDC STATUS",PAD,y);y+=3;
+  const sqW=(FW-6)/4;
+  [{l:"S",c:[239,68,68],n:"Safety"},{l:"Q",c:[245,158,11],n:"Quality"},{l:"D",c:[59,130,246],n:"Delivery"},{l:"C",c:[34,197,94],n:"Cost"}].forEach((s,i)=>{
+    const sx=PAD+(i*(sqW+2));
+    doc.setDrawColor(...s.c);doc.setFillColor(250,250,250);doc.roundedRect(sx,y,sqW,10,1,1,"FD");
+    doc.setTextColor(...s.c);doc.setFont("helvetica","bold");doc.setFontSize(8);doc.text(s.l,sx+sqW/2,y+4.5,{align:"center"});
+    doc.setFontSize(5);doc.setFont("helvetica","normal");doc.text(s.n,sx+sqW/2,y+8.5,{align:"center"});
+  });
+
+  // ── PANEL 2: TODAY'S STANDARD WORK (Required + Maintain tasks) ──
+  const p2x=PW;
+  panelBg(p2x);hdr(p2x,lang==="es"?"TRABAJO ESTÁNDAR DE HOY":"TODAY'S STANDARD WORK",dateStr);
+  y=16;
+  // Column headers
+  doc.setFont("helvetica","bold");doc.setFontSize(6);doc.setTextColor(...MUTED);
+  doc.text(lang==="es"?"HORA":"TIME",p2x+PAD,y);
+  doc.text("✓",p2x+PAD+16,y);
+  doc.text(lang==="es"?"TAREA":"TASK",p2x+PAD+22,y);
+  doc.text(lang==="es"?"FREC":"FREQ",p2x+PW-PAD-12,y,{align:"right"});
+  doc.setDrawColor(...BORDER);doc.line(p2x+PAD,y+2,p2x+PW-PAD,y+2);y+=5;
+
+  const ROW=8;
+  const maxRows=Math.floor((H-y-4)/ROW);
+  // Combine required items and maintain tasks into schedule
+  const schedItems=[
+    ...required.map(r=>({time:r.timeOfDay||"",task:r.text,freq:freqLabel(r),isRequired:true})),
+    ...tasks.filter(x=>x.disposition==="MAINTAIN").map(x=>({time:x.timeBin||"",task:x.description,freq:"",isRequired:false}))
+  ].slice(0,maxRows);
+  const emptyRows=Math.max(0,maxRows-schedItems.length);
+
+  schedItems.forEach((item,i)=>{
+    const ry=y+(i*ROW);
+    if(i%2===0){doc.setFillColor(248,250,252);doc.rect(p2x+PAD,ry-2.5,FW,ROW,"F");}
+    doc.setFont("helvetica","bold");doc.setFontSize(6.5);doc.setTextColor(...BLUE);
+    doc.text(item.time||"—",p2x+PAD,ry+1);
+    doc.setDrawColor(...BORDER);doc.setLineWidth(0.3);doc.rect(p2x+PAD+14,ry-1.5,3.5,3.5,"S");
+    doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(...TEXT);
+    const tl=doc.splitTextToSize(item.task||"",FW-34);
+    doc.text(tl[0]||"",p2x+PAD+20,ry+1);
+    if(item.freq){doc.setFontSize(5.5);doc.setTextColor(...MUTED);doc.text(item.freq,p2x+PW-PAD-1,ry+1,{align:"right"});}
+    doc.setDrawColor(...BORDER);doc.setLineWidth(0.1);doc.line(p2x+PAD,ry+ROW-2,p2x+PW-PAD,ry+ROW-2);
+  });
+  for(let i=0;i<emptyRows;i++){
+    const ry=y+((schedItems.length+i)*ROW);
+    if((schedItems.length+i)%2===0){doc.setFillColor(248,250,252);doc.rect(p2x+PAD,ry-2.5,FW,ROW,"F");}
+    doc.setDrawColor(...BORDER);doc.setLineWidth(0.3);doc.rect(p2x+PAD+14,ry-1.5,3.5,3.5,"S");
+    doc.line(p2x+PAD+20,ry+1,p2x+PW-PAD-14,ry+1);
+    doc.setLineWidth(0.1);doc.line(p2x+PAD,ry+ROW-2,p2x+PW-PAD,ry+ROW-2);
+  }
+
+  // ── PANEL 3: REFLECTION & CRITICAL WATCH ──
+  const p3x=PW*2;
+  panelBg(p3x);hdr(p3x,lang==="es"?"REFLEXIÓN Y NOTAS":"REFLECTION & NOTES");
+  y=16;
+  const refSections=[
+    {icon:"✓",lbl:lang==="es"?"¿QUÉ SALIÓ BIEN?":"WHAT WENT WELL?",h:28},
+    {icon:"⚠",lbl:lang==="es"?"¿QUÉ PROBLEMAS SURGIERON?":"WHAT ISSUES SURFACED?",h:28},
+    {icon:"→",lbl:lang==="es"?"SEGUIMIENTOS NECESARIOS":"FOLLOW-UPS NEEDED",h:22},
+    {icon:"💡",lbl:lang==="es"?"IDEA DE MEJORA":"IMPROVEMENT IDEA",h:22},
+  ];
+  refSections.forEach(s=>{
+    doc.setFont("helvetica","bold");doc.setFontSize(6.5);doc.setTextColor(...NAVY);
+    doc.text(s.icon+" "+s.lbl,p3x+PAD,y);y+=3;
+    box(p3x+PAD,y,FW,s.h);
+    // lined writing area inside box
+    for(let i=1;i<Math.floor(s.h/7);i++){doc.setDrawColor(220,230,240);doc.setLineWidth(0.1);doc.line(p3x+PAD+2,y+(i*7),p3x+PW-PAD-2,y+(i*7));}
+    y+=s.h+4;
+  });
+  // Watch items summary if any
+  if(watchItems.length>0&&y<H-20){
+    lbl(lang==="es"?"VIGILANCIA CRÍTICA — ALERTAS":"CRITICAL WATCH — ALERTS",p3x+PAD,y);y+=3;
+    watchItems.slice(0,4).forEach(w=>{
+      if(y>H-8)return;
+      doc.setFont("helvetica","bold");doc.setFontSize(6);doc.setTextColor(...RED);
+      doc.text("●",p3x+PAD,y);
+      doc.setFont("helvetica","normal");doc.setTextColor(...TEXT);
+      const wl=doc.splitTextToSize(w.text+(w.threshold?" — "+w.threshold:""),FW-5);
+      doc.text(wl[0],p3x+PAD+4,y);y+=5;
+    });
+  }
+
+  // ── PAGE 2: ACTION ITEMS (back panel when printed double-sided) ──
+  doc.addPage();
+  doc.setFillColor(...WHITE);doc.rect(0,0,W,H,"F");
+  doc.setFillColor(...NAVY);doc.rect(0,0,W,12,"F");
+  doc.setTextColor(...WHITE);doc.setFont("helvetica","bold");doc.setFontSize(10);
+  doc.text((lang==="es"?"ACCIONES / CONTRAMEDIDAS — ":"ACTION ITEMS / COUNTERMEASURES — ")+levelName,W/2,7.5,{align:"center"});
+
+  // Firefighting items
+  const ff=tasks.filter(x=>x.isFirefighting);
+  const push=tasks.filter(x=>x.disposition==="PUSH_DOWN"&&!x.isFirefighting);
+  const cols=[55,50,55,35,25,25,22];
+  const hdrs=lang==="es"
+    ?["PROBLEMA","CAUSA RAÍZ","ACCIÓN","RESPONSABLE","FECHA","CATEGORÍA","ESTADO"]
+    :["PROBLEM / DESCRIPTION","ROOT CAUSE","ACTION / COUNTERMEASURE","OWNER","DUE","CATEGORY","STATUS"];
+  const cX=[4];cols.forEach((c,i)=>{if(i<cols.length-1)cX.push(cX[cX.length-1]+c);});
+  y=17;
+  doc.setFillColor(241,245,249);doc.rect(4,y-4,W-8,7,"F");
+  hdrs.forEach((h,i)=>{doc.setFont("helvetica","bold");doc.setFontSize(6);doc.setTextColor(...MUTED);doc.text(h,cX[i]+1,y);});
+  doc.setDrawColor(...BORDER);doc.line(4,y+2,W-4,y+2);y+=5;
+
+  const aROW=9;
+  const allActions=[
+    ...ff.map(x=>({prob:x.description,cause:x.firefightingCause||"",action:x.firefightingNote||"",owner:"",due:"",cat:"🔥 FF",status:"Open"})),
+    ...push.map(x=>({prob:x.description,cause:"",action:x.pushNote||"",owner:LL[x.pushToLevel]?.[lang]||x.pushToLevel||"",due:"",cat:"↓ Push",status:"Open"})),
+  ];
+  const maxA=Math.floor((H-y-4)/aROW);
+  const emptyA=Math.max(0,15-allActions.length);
+  [...allActions.slice(0,maxA)].forEach((a,i)=>{
+    if(i%2===0){doc.setFillColor(248,250,252);doc.rect(4,y-2.5,W-8,aROW,"F");}
+    [a.prob,a.cause,a.action,a.owner,a.due,a.cat,a.status].forEach((v,ci)=>{
+      doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(...TEXT);
+      const vl=doc.splitTextToSize(v||"",cols[ci]-2);doc.text(vl[0]||"",cX[ci]+1,y+1);
+    });
+    doc.setDrawColor(...BORDER);doc.setLineWidth(0.1);doc.line(4,y+aROW-2,W-4,y+aROW-2);y+=aROW;
+  });
+  for(let i=0;i<Math.min(emptyA,maxA-allActions.length);i++){
+    if((allActions.length+i)%2===0){doc.setFillColor(248,250,252);doc.rect(4,y-2.5,W-8,aROW,"F");}
+    doc.setDrawColor(...BORDER);doc.setLineWidth(0.1);doc.line(4,y+aROW-2,W-4,y+aROW-2);y+=aROW;
+  }
+
+  const fname=`LSW_Trifold_${levelName.replace(/\s/g,"_")}_${new Date().toISOString().slice(0,10)}.pdf`;
+  doc.save(fname);
+};
+
+// ─── EXCEL TRIFOLD (CSV with panel structure) ──────────────────
+const exportExcelTrifold=(tasks,required,watchItems,level,lang,t)=>{
+  const levelName=LL[level]?.[lang]||level;
+  const dateStr=new Date().toLocaleDateString(lang==="es"?"es-MX":"en-US");
+  const q=s=>'"'+String(s||"").replace(/"/g,'""')+'"';
+  const rows=[];
+
+  // Build three column arrays (one per panel)
+  const p1=[],p2=[],p3=[];
+
+  // Panel 1 header
+  p1.push(lang==="es"?"TRABAJO ESTÁNDAR DEL LÍDER":"LEADER STANDARD WORK");
+  p1.push(levelName);p1.push(dateStr);p1.push("");
+  p1.push(lang==="es"?"NOMBRE:":"NAME:");p1.push("_________________________");
+  p1.push(lang==="es"?"DEPARTAMENTO:":"DEPT:");p1.push("_________________________");
+  p1.push(lang==="es"?"TURNO:":"SHIFT:");p1.push("_________________________");
+  p1.push(lang==="es"?"FIRMA:":"SIGNATURE:");p1.push("_________________________");
+  p1.push("");
+  p1.push(lang==="es"?"PROBLEMAS / NOTAS:":"DAILY ISSUES / NOTES:");
+  p1.push(""); p1.push(""); p1.push(""); p1.push(""); p1.push("");
+
+  // Panel 2 header + schedule
+  p2.push(lang==="es"?"TRABAJO ESTÁNDAR DE HOY":"TODAY'S STANDARD WORK");
+  p2.push(lang==="es"?"HORA | ✓ | TAREA | FRECUENCIA":"TIME | ✓ | TASK | FREQUENCY");
+  p2.push("──────────────────────────────");
+  required.forEach(r=>{p2.push(`${r.timeOfDay||"—"} | ☐ | ${r.text} | ${freqLabel(r)}`);});
+  tasks.filter(x=>x.disposition==="MAINTAIN").forEach(x=>{p2.push(`${x.timeBin||"—"} | ☐ | ${x.description} |`);});
+  while(p2.length<p1.length+5)p2.push("       | ☐ |                              |");
+
+  // Panel 3 header + reflection
+  p3.push(lang==="es"?"REFLEXIÓN Y NOTAS":"REFLECTION & NOTES");
+  p3.push("");
+  p3.push(lang==="es"?"✓ ¿QUÉ SALIÓ BIEN?":"✓ WHAT WENT WELL?");
+  p3.push(""); p3.push(""); p3.push(""); p3.push("");
+  p3.push(lang==="es"?"⚠ ¿QUÉ PROBLEMAS SURGIERON?":"⚠ WHAT ISSUES SURFACED?");
+  p3.push(""); p3.push(""); p3.push(""); p3.push("");
+  p3.push(lang==="es"?"→ SEGUIMIENTOS NECESARIOS":"→ FOLLOW-UPS NEEDED");
+  p3.push(""); p3.push(""); p3.push("");
+  p3.push(lang==="es"?"💡 IDEA DE MEJORA":"💡 IMPROVEMENT IDEA");
+  p3.push(""); p3.push("");
+
+  // Zip three columns
+  const maxLen=Math.max(p1.length,p2.length,p3.length);
+  rows.push([q(lang==="es"?"PANEL 1 — PORTADA":"PANEL 1 — FRONT COVER"),
+             q(lang==="es"?"PANEL 2 — TRABAJO ESTÁNDAR":"PANEL 2 — STANDARD WORK"),
+             q(lang==="es"?"PANEL 3 — REFLEXIÓN":"PANEL 3 — REFLECTION")].join(","));
+  for(let i=0;i<maxLen;i++){
+    rows.push([q(p1[i]||""),q(p2[i]||""),q(p3[i]||"")].join(","));
+  }
+
+  // Back panel — action items
+  rows.push("","","");
+  rows.push([q(lang==="es"?"PANEL TRASERO — ACCIONES / CONTRAMEDIDAS":"BACK PANEL — ACTION ITEMS / COUNTERMEASURES"),"",""].join(","));
+  rows.push([q(lang==="es"?"PROBLEMA":"PROBLEM"),q(lang==="es"?"CAUSA RAÍZ":"ROOT CAUSE"),q(lang==="es"?"ACCIÓN":"ACTION"),q(lang==="es"?"RESPONSABLE":"OWNER"),q(lang==="es"?"FECHA":"DUE"),q("STATUS")].join(","));
+  const ff=tasks.filter(x=>x.isFirefighting);
+  const push=tasks.filter(x=>x.disposition==="PUSH_DOWN"&&!x.isFirefighting);
+  [...ff,...push].forEach(x=>{
+    rows.push([q(x.description),q(x.firefightingCause||""),q(x.firefightingNote||x.pushNote||""),q(LL[x.pushToLevel]?.[lang]||""),q(""),q(x.isFirefighting?"🔥":"↓")].join(","));
+  });
+  for(let i=0;i<Math.max(0,8-ff.length-push.length);i++){
+    rows.push([q(""),q(""),q(""),q(""),q(""),q("Open")].join(","));
+  }
+
+  const csv=rows.join("\r\n");
+  const BOM="\uFEFF";
+  dlBlob(new Blob([BOM+csv],{type:"text/csv;charset=utf-8;"}),
+    `LSW_Trifold_${levelName.replace(/\s/g,"_")}_${new Date().toISOString().slice(0,10)}.csv`);
+};
+
+
+// ─── EXPORT MODAL ─────────────────────────────────────────────
+function renderExportModal() {
+  const tsk = t(); const ac = accent();
+  return div({className:"modal-overlay",
+    onClick:()=>{ state.showExportModal=false; render(); }},
+    div({className:"modal-box",style:{border:`1px solid ${ac}66`},
+      onClick:e=>e.stopPropagation()},
+      div({style:{fontFamily:"'Barlow Condensed',sans-serif",fontSize:16,fontWeight:800,letterSpacing:2,color:"#f9fafb",marginBottom:4}},tsk.exportPickTitle),
+      div({style:{fontSize:11,color:"#6b7280",marginBottom:20}},`${tsk.exportPickSub} ${LL[state.activeLevel][state.lang]}`),
+      div({style:{display:"flex",flexDirection:"column",gap:10}},
+        btn({style:{background:"#dc262622",border:"1px solid #dc262666",color:"#f87171",borderRadius:8,padding:"14px 16px",fontSize:12,fontWeight:700,textAlign:"left",letterSpacing:1},
+          onClick:()=>{
+            exportPDFTrifold(tasks(),required(),watchItems(),state.activeLevel,state.lang,t(),accent());
+            state.showExportModal=false; notify(tsk.saved); render();
+          }},
+          div({},tsk.exportPDF),
+          div({style:{fontSize:10,fontWeight:400,color:"#6b7280",marginTop:3}},tsk.exportPDFsub)
+        ),
+        btn({style:{background:"#16a34a22",border:"1px solid #16a34a66",color:"#4ade80",borderRadius:8,padding:"14px 16px",fontSize:12,fontWeight:700,textAlign:"left",letterSpacing:1},
+          onClick:()=>{
+            exportExcelTrifold(tasks(),required(),watchItems(),state.activeLevel,state.lang,t());
+            state.showExportModal=false; notify(tsk.saved); render();
+          }},
+          div({},tsk.exportXL),
+          div({style:{fontSize:10,fontWeight:400,color:"#6b7280",marginTop:3}},tsk.exportXLsub)
+        ),
+        btn({style:{background:"transparent",border:"1px solid #374151",color:"#6b7280",borderRadius:8,padding:"10px 16px",fontSize:11,marginTop:4},
+          onClick:()=>{ state.showExportModal=false; render(); }},
+          tsk.cancelBtn)
+      )
+    )
+  );
+}
+
+// ─── MAIN RENDER ──────────────────────────────────────────────
+function render() {
+  const tsk = t(); const ac = accent();
+  document.documentElement.style.setProperty("--accent", ac);
+
+  const totalMins = tasks().reduce((s,x)=>s+(x.minutes||0),0);
+  const ffMins = tasks().filter(x=>x.isFirefighting).reduce((s,x)=>s+(x.minutes||0),0);
+  const wlMins = tasks().filter(x=>x.disposition==="PUSH_DOWN").reduce((s,x)=>s+(x.minutes||0),0);
+
+  const tabContent = {
+    log: renderLog, lsw: renderLSW, required: renderRequired,
+    watch: renderWatch, guide: renderGuide, analyze: renderAnalyze, action: renderAction
+  }[state.activeTab]?.() || div({});
+
+  const root = div({},
+    // NOTIFICATION
+    state.notification ? div({className:"notif-anim",style:{position:"fixed",top:14,right:14,background:"#16a34a",color:"#fff",padding:"9px 16px",borderRadius:8,fontSize:12,fontWeight:700,zIndex:999,letterSpacing:1}},`✓ ${state.notification}`) : null,
+
+    // HEADER
+    div({style:{background:"#080e18",borderBottom:"1px solid #0f1925",padding:"12px 16px"}},
+      div({style:{maxWidth:880,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}},
+        div({},
+          div({style:{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:800,letterSpacing:2,color:"#f9fafb"}},tsk.appTitle),
+          div({style:{fontSize:9,letterSpacing:3,color:"#374151",marginTop:1}},tsk.appSub)
+        ),
+        div({style:{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}},
+          div({style:{display:"flex",background:"#111827",border:"1px solid #1f2937",borderRadius:20,overflow:"hidden"}},
+            ...["en","es"].map(l=>btn({
+              style:{padding:"6px 14px",border:"none",background:state.lang===l?ac:"transparent",color:state.lang===l?"#000":"#6b7280",fontSize:11,fontWeight:700,transition:"all .2s"},
+              onClick:()=>{ state.lang=l; render(); }
+            }, l.toUpperCase()))
+          ),
+          totalMins>0 ? div({style:{display:"flex",gap:6}},
+            statBadge(`${totalMins}m`,tsk.loggedBadge,"#6b7280"),
+            ffMins>0?statBadge(`${Math.round((ffMins/totalMins)*100)}%`,tsk.ffBadge,"#f97316"):null,
+            wlMins>0?statBadge(`${Math.round((wlMins/totalMins)*100)}%`,tsk.wlBadge,"#d97706"):null
+          ) : null,
+          btn({style:{background:ac+"22",border:`1px solid ${ac}66`,color:ac,borderRadius:6,padding:"7px 14px",fontSize:11,fontWeight:700,letterSpacing:1},
+            onClick:()=>{ state.showExportModal=true; render(); }},
+            `↓ ${tsk.exportLSW} (${LL[state.activeLevel][state.lang]})`)
+        )
+      )
+    ),
+
+    // LEVEL SELECTOR
+    div({style:{background:"#080e18",borderBottom:"1px solid #0f1925",padding:"10px 16px",overflowX:"auto"}},
+      div({style:{maxWidth:880,margin:"0 auto",display:"flex",gap:6,alignItems:"center",whiteSpace:"nowrap"}},
+        span({style:{fontSize:9,color:"#374151",letterSpacing:2,marginRight:4}},tsk.loggingFor),
+        ...LEVELS.map(l=>btn({
+          style:{padding:"6px 12px",borderRadius:6,fontSize:10,fontWeight:700,letterSpacing:1,
+            border:`1px solid ${state.activeLevel===l?LC[l]:"#1f2937"}`,
+            background:state.activeLevel===l?LC[l]+"22":"transparent",
+            color:state.activeLevel===l?LC[l]:"#4b5563",transition:"all .2s",whiteSpace:"nowrap"},
+          onClick:()=>{
+            state.activeLevel=l;
+            autoLoadTemplate();
+            render();
+          }
+        },
+          LL[l][state.lang].toUpperCase(),
+          (state.tasksByLevel[l]||[]).length>0 ? span({style:{marginLeft:5,background:LC[l]+"33",color:LC[l],borderRadius:10,padding:"1px 5px",fontSize:9}},(state.tasksByLevel[l]||[]).length) : null
+        ))
+      )
+    ),
+
+    // TABS
+    div({className:"tab-bar"},
+      ...tsk.tabs.map((label,i)=>btn({
+        className:`tab-btn${state.activeTab===tsk.tabKeys[i]?" active":""}`,
+        onClick:()=>{ state.activeTab=tsk.tabKeys[i]; render(); }
+      }, label))
+    ),
+
+    // CONTENT
+    div({style:{padding:"18px 16px",maxWidth:880,margin:"0 auto"}}, tabContent),
+
+    // EXPORT MODAL
+    state.showExportModal ? renderExportModal() : null
+  );
+
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+  app.appendChild(root);
+}
+
+function statBadge(val, label, color) {
+  return div({style:{background:color+"15",border:`1px solid ${color}44`,borderRadius:8,padding:"6px 10px",textAlign:"center"}},
+    div({style:{fontSize:14,fontWeight:700,color,lineHeight:1}},val),
+    div({style:{fontSize:8,color,opacity:.7,letterSpacing:1,marginTop:2}},label)
+  );
+}
+
+// ─── INIT ──────────────────────────────────────────────────────
+autoLoadTemplate();
+render();
+</script>
+</body>
+</html>
